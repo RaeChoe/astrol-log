@@ -1,6 +1,18 @@
+"use client";
+
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
+  const pathname = usePathname();
+
+  const navItems = [
+    { href: "/", label: "Today" },
+    { href: "/explore", label: "Explore" },
+    { href: "/collection", label: "Collection" },
+    { href: "/observations", label: "Observations" },
+  ];
+
   return (
     <header className="site-header">
       <div className="container header-inner">
@@ -10,10 +22,15 @@ export default function Header() {
         </Link>
 
         <nav className="desktop-nav">
-          <Link href="/">Today</Link>
-          <Link href="/explore">Explore</Link>
-          <Link href="/collection">Collection</Link>
-          <Link href="/observations">Observations</Link>
+          {navItems.map(item => {
+            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+
+            return (
+              <Link key={item.href} href={item.href} className={active ? "active" : ""}>
+                {item.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <Link href="/login" className="login-link">
