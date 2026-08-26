@@ -1,4 +1,5 @@
 import { Playfair_Display, Noto_Serif_KR } from "next/font/google";
+import Header from "@/components/layout/Header";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -20,7 +21,10 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko">
-      <body className={`${playfair.variable} ${notoSerifKR.variable}`}>{children}</body>
+      <body className={`${playfair.variable} ${notoSerifKR.variable}`}>
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }
