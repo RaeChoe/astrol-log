@@ -8,15 +8,20 @@ export const metadata = {
 export default function SignupPage() {
   return (
     <main className="auth-page">
-      <section
-        className="auth-visual"
+      {/* 화면 왼쪽을 채우는 이미지 */}
+      <div
+        className="auth-background auth-background-signup"
         style={{
           backgroundImage: 'url("/images/home/saturn-event.png")',
         }}
+        aria-hidden="true"
       >
-        <div className="auth-visual-overlay" />
+        <div className="auth-background-overlay" />
+      </div>
 
-        <div className="auth-visual-copy">
+      {/* 실제 콘텐츠는 모두 1280px 안 */}
+      <div className="container auth-layout">
+        <section className="auth-copy">
           <h1 className="display-en">
             START YOUR
             <br />
@@ -30,37 +35,37 @@ export default function SignupPage() {
             <br />
             나만의 천체 도감을 완성해보세요.
           </p>
-        </div>
-      </section>
+        </section>
 
-      <section className="auth-content">
-        <div className="auth-content-inner">
-          <h2 className="heading-ko">
-            나만의 관측 기록을
-            <br />
-            시작하세요.
-          </h2>
+        <section className="auth-content">
+          <div className="auth-content-inner">
+            <h2 className="heading-ko">
+              나만의 관측 기록을
+              <br />
+              시작하세요.
+            </h2>
 
-          <p className="auth-description">AstroLog와 함께 당신만의 밤하늘을 기록해보세요.</p>
+            <p className="auth-description">AstroLog와 함께 당신만의 밤하늘을 기록해보세요.</p>
 
-          <SignupForm />
+            <SignupForm />
 
-          <div className="auth-divider">
-            <span />
-            <p>또는</p>
-            <span />
+            <div className="auth-divider">
+              <span />
+              <p>또는</p>
+              <span />
+            </div>
+
+            <button type="button" className="google-auth-button">
+              <img src="/images/auth/google.png" alt="" className="google-auth-icon" />
+              Google로 계속하기
+            </button>
+
+            <p className="auth-switch">
+              이미 계정이 있나요? <Link href="/login">로그인</Link>
+            </p>
           </div>
-
-          <button type="button" className="google-auth-button">
-            <span>G</span>
-            Google로 계속하기
-          </button>
-
-          <p className="auth-switch">
-            이미 계정이 있나요? <Link href="/login">로그인</Link>
-          </p>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

@@ -1912,58 +1912,96 @@ img {
 ======================================== */
 
 .auth-page {
-  min-height: calc(100vh - 72px);
-
-  display: grid;
-  grid-template-columns: 1fr 1.15fr;
-
-  background: var(--background);
-}
-
-/* Visual */
-
-.auth-visual {
   position: relative;
 
   min-height: calc(100vh - 72px);
 
-  background-position: center;
+  overflow: hidden;
+
+  background: var(--background);
+}
+
+/* ========================================
+   FULL-BLEED BACKGROUND
+   이미지만 컨테이너 밖까지 확장
+======================================== */
+
+.auth-background {
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 50%;
+
+  background-color: #03050a;
   background-repeat: no-repeat;
   background-size: cover;
+  background-position: center;
 }
 
-.auth-login-visual {
-  background-size: 65%;
-  background-color: #03050a;
+.auth-background-login {
+  background-position: center;
 }
 
-.auth-visual-overlay {
+.auth-background-signup {
+  background-position: center;
+}
+
+.auth-background-overlay {
   position: absolute;
   inset: 0;
 
-  background: linear-gradient(180deg, rgba(3, 5, 10, 0.12), rgba(3, 5, 10, 0.2) 50%, #03050a 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(3, 5, 10, 0.06) 0%,
+    rgba(3, 5, 10, 0.12) 55%,
+    rgba(3, 5, 10, 0.8) 100%
+  );
 }
 
-.auth-visual-copy {
-  position: absolute;
+/* ========================================
+   INNER LAYOUT
+   모든 콘텐츠는 1280px 안
+======================================== */
+
+.auth-layout {
+  position: relative;
   z-index: 2;
 
-  left: 42px;
-  right: 42px;
-  bottom: 56px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  min-height: calc(100vh - 72px);
 }
 
-.auth-visual-copy h1 {
+/* ========================================
+   LEFT COPY
+======================================== */
+
+.auth-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  padding: 60px 64px 64px 0;
+}
+
+.auth-copy h1 {
   margin: 0;
 
-  font-size: clamp(38px, 4vw, 58px);
+  max-width: 470px;
+
+  font-size: clamp(42px, 4vw, 62px);
   font-weight: 600;
 
-  line-height: 1;
+  line-height: 0.98;
+  letter-spacing: -0.035em;
 }
 
-.auth-visual-copy p {
-  margin: 18px 0 0;
+.auth-copy p {
+  margin: 20px 0 0;
 
   color: var(--text-muted);
 
@@ -1971,16 +2009,16 @@ img {
   line-height: 1.7;
 }
 
-/* Form area */
+/* ========================================
+   RIGHT FORM
+======================================== */
 
 .auth-content {
   display: flex;
   align-items: center;
   justify-content: center;
 
-  min-height: calc(100vh - 72px);
-
-  padding: 60px 32px;
+  padding: 60px 0 60px 64px;
 }
 
 .auth-content-inner {
@@ -2004,7 +2042,9 @@ img {
   font-size: 13px;
 }
 
-/* Fields */
+/* ========================================
+   AUTH FORM
+======================================== */
 
 .auth-form {
   display: flex;
@@ -2062,7 +2102,9 @@ img {
   font-size: 10px;
 }
 
-/* Error */
+/* ========================================
+   AUTH MESSAGES
+======================================== */
 
 .auth-error {
   margin: -4px 0 0;
@@ -2087,7 +2129,9 @@ img {
   font-size: 11px;
 }
 
-/* Forgot */
+/* ========================================
+   FORGOT PASSWORD
+======================================== */
 
 .auth-forgot-row {
   display: flex;
@@ -2110,7 +2154,13 @@ img {
   font-size: 10px;
 }
 
-/* Submit */
+.auth-forgot-row button:hover {
+  color: var(--primary);
+}
+
+/* ========================================
+   SUBMIT
+======================================== */
 
 .auth-submit {
   width: 100%;
@@ -2147,7 +2197,9 @@ img {
   cursor: default;
 }
 
-/* Divider */
+/* ========================================
+   DIVIDER
+======================================== */
 
 .auth-divider {
   display: flex;
@@ -2174,7 +2226,9 @@ img {
   font-size: 10px;
 }
 
-/* Google */
+/* ========================================
+   GOOGLE
+======================================== */
 
 .google-auth-button {
   width: 100%;
@@ -2206,7 +2260,18 @@ img {
   background: rgba(255, 255, 255, 0.03);
 }
 
-/* Switch */
+.google-auth-icon {
+  width: 18px;
+  height: 18px;
+
+  object-fit: contain;
+
+  flex-shrink: 0;
+}
+
+/* ========================================
+   AUTH SWITCH
+======================================== */
 
 .auth-switch {
   margin: 20px 0 0;
@@ -2223,40 +2288,75 @@ img {
 }
 
 /* ========================================
+   AUTH TABLET
+======================================== */
+
+@media (max-width: 1024px) {
+  .auth-copy {
+    padding-right: 36px;
+  }
+
+  .auth-content {
+    padding-left: 36px;
+  }
+
+  .auth-copy h1 {
+    font-size: 46px;
+  }
+}
+
+/* ========================================
    AUTH MOBILE
 ======================================== */
 
 @media (max-width: 767px) {
   .auth-page {
+    min-height: auto;
+  }
+
+  .auth-background {
+    position: relative;
+
+    width: 100%;
+    height: 280px;
+  }
+
+  .auth-layout {
     display: block;
 
-    min-height: calc(100vh - 72px);
+    min-height: auto;
   }
 
-  .auth-visual {
-    min-height: 230px;
+  .auth-copy {
+    position: absolute;
 
-    background-position: center;
+    top: 0;
+    left: 16px;
+    right: 16px;
+
+    height: 280px;
+
+    padding: 0 0 28px;
+
+    justify-content: flex-end;
   }
 
-  .auth-login-visual {
-    background-size: cover;
-  }
-
-  .auth-visual-copy {
-    left: 24px;
-    right: 24px;
-    bottom: 26px;
-  }
-
-  .auth-visual-copy h1 {
+  .auth-copy h1 {
     font-size: 34px;
   }
 
-  .auth-content {
-    min-height: auto;
+  .auth-copy p {
+    margin-top: 12px;
 
-    padding: 44px 24px 70px;
+    font-size: 11px;
+  }
+
+  .auth-content {
+    padding: 44px 0 70px;
+  }
+
+  .auth-content-inner {
+    width: 100%;
   }
 
   .auth-content-inner > h2 {
