@@ -30,7 +30,6 @@ export default function LogoutButton() {
 
     if (error) {
       console.error("로그아웃 오류:", error);
-
       setLoading(false);
       return;
     }
@@ -42,7 +41,7 @@ export default function LogoutButton() {
   return (
     <button
       type="button"
-      className="header-logout-button"
+      className="profile-menu-item profile-logout-button"
       onClick={handleLogout}
       disabled={loading}
     >

@@ -25,25 +25,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LogoutButton from "./LogoutButton";
+import ProfileDropdown from "./ProfileDropdown";
 
 const NAV_ITEMS = [
-  {
-    href: "/",
-    label: "Today",
-  },
-  {
-    href: "/explore",
-    label: "Explore",
-  },
-  {
-    href: "/collection",
-    label: "Collection",
-  },
-  {
-    href: "/observations",
-    label: "Observations",
-  },
+  { href: "/", label: "Today" },
+  { href: "/explore", label: "Explore" },
+  { href: "/collection", label: "Collection" },
+  { href: "/observations", label: "Observations" },
 ];
 
 export default function HeaderClient({ user, profile }) {
@@ -51,22 +39,16 @@ export default function HeaderClient({ user, profile }) {
 
   const nickname = profile?.nickname || user?.email?.split("@")[0] || "Stargazer";
 
-  /*
-   * 프로필 이미지가 없다면
-   * 닉네임 첫 글자를 Avatar에 표시
-   */
   const initial = nickname.trim().charAt(0).toUpperCase();
 
   return (
     <header className="site-header">
       <div className="container header-inner">
-        {/* Logo */}
         <Link href="/" className="logo">
           <span className="logo-symbol">✦</span>
           AstroLog
         </Link>
 
-        {/* Navigation */}
         <nav className="desktop-nav">
           {NAV_ITEMS.map(item => {
             const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
@@ -79,32 +61,13 @@ export default function HeaderClient({ user, profile }) {
           })}
         </nav>
 
-        {/* Auth */}
         <div className="header-auth">
           {!user ? (
             <Link href="/login" className="login-link">
               로그인
             </Link>
           ) : (
-            <div className="header-profile">
-              <Link
-                href="/observatory"
-                className="header-avatar-link"
-                aria-label={`${nickname} 프로필`}
-              >
-                {profile?.avatar_url ? (
-                  <img src={profile.avatar_url} alt="" className="header-avatar-image" />
-                ) : (
-                  <span className="header-avatar">{initial}</span>
-                )}
-              </Link>
-
-              <div className="header-profile-info">
-                <span className="header-nickname">{nickname}</span>
-
-                <LogoutButton />
-              </div>
-            </div>
+            <ProfileDropdown user={user} profile={profile} nickname={nickname} initial={initial} />
           )}
         </div>
       </div>
