@@ -1,3 +1,28 @@
+/*
+ * Object Detail Page
+ *
+ * [역할]
+ * - /objects/[id] 경로에서 특정 천체의 상세 정보를 보여주는 페이지
+ *
+ * [Next.js 포인트]
+ * - [id]를 이용한 Dynamic Route
+ * - Server Component에서 Supabase 단건 조회
+ * - 존재하지 않는 천체는 notFound()로 404 처리
+ * - generateMetadata()로 천체별 동적 SEO metadata 생성
+ *
+ * [현재 데이터]
+ * Supabase:
+ * - 천체 이름 / 종류 / 설명 / 거리 / 등급 / 이미지
+ *
+ * Mock:
+ * - 고도 / 방위 / 현재 관측 조건
+ *
+ * [추후 연결]
+ * - 로그인 사용자 즐겨찾기 여부
+ * - 실제 관측 기록
+ * - 천문 API 기반 실시간 고도 / 방위 / 관측 조건
+ */
+
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -17,25 +42,13 @@ const TYPE_LABELS = {
   galaxy: "Galaxy",
 };
 
-const OBSERVATION_META = [
-  {
-    label: "고도",
-    value: "48°",
-  },
-  {
-    label: "방위",
-    value: "NE",
-  },
-  {
-    label: "등급",
-    value: null,
-    useMagnitude: true,
-  },
-  {
-    label: "관측 조건",
-    value: "좋음",
-  },
-];
+const COLLECTION_LABELS = {
+  solar_system: "Solar System",
+  messier: "Messier",
+  star: "Star",
+  nebula: "Nebula",
+  galaxy: "Galaxy",
+};
 
 export async function generateMetadata({ params }) {
   const { id } = await params;
@@ -44,7 +57,7 @@ export async function generateMetadata({ params }) {
 
   const { data: object } = await supabase
     .from("celestial_objects")
-    .select("name_en, name_ko")
+    .select("name_en, name_ko, description")
     .eq("id", id)
     .maybeSingle();
 
@@ -56,7 +69,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${object.name_en} | AstroLog`,
-    description: `${object.name_ko}의 천체 정보와 관측 정보를 확인해보세요.`,
+    description: object.description || `${object.name_ko}의 천체 정보와 관측 정보를 확인해보세요.`,
   };
 }
 
@@ -91,121 +104,170 @@ export default async function ObjectDetailPage({ params }) {
 
   const image = object.image_url || FALLBACK_IMAGES[object.external_id] || "/images/home/hero.png";
 
-  const observationMeta = OBSERVATION_META.map(item => {
-    if (item.useMagnitude) {
-      return {
-        ...item,
-        value: object.magnitude !== null ? String(object.magnitude) : "-",
-      };
-    }
+  const typeLabel = TYPE_LABELS[object.type] ?? object.type;
 
-    return item;
-  });
+  const collectionLabel =
+    COLLECTION_LABELS[object.collection_group] ?? object.collection_group ?? "-";
+
+  const observationInfo = [
+    {
+      label: "고도",
+      value: "48°",
+    },
+    {
+      label: "방위",
+      value: "NE",
+    },
+    {
+      label: "등급",
+      value: object.magnitude !== null ? String(object.magnitude) : "-",
+    },
+    {
+      label: "관측 조건",
+      value: "좋음",
+      accent: true,
+    },
+  ];
 
   return (
     <main className="object-detail-page">
-      {/* HERO */}
-      <section className="object-detail-hero">
-        <div className="container">
-          <Link href="/explore" className="object-back-link">
-            ← Explore
+      {/* ======================================
+          HERO IMAGE
+      ====================================== */}
+      <section
+        className="object-hero"
+        style={{
+          backgroundImage: `url("${image}")`,
+        }}
+      >
+        <div className="object-hero-overlay" />
+
+        <div className="container object-hero-inner">
+          <Link href="/explore" className="object-back-button">
+            ← 뒤로
           </Link>
+        </div>
+      </section>
 
-          <div className="object-detail-hero-grid">
-            <div className="object-detail-image-wrapper">
-              <img src={image} alt={object.name_ko} className="object-detail-image" />
+      {/* ======================================
+          MAIN INFORMATION
+      ====================================== */}
+      <section className="object-main-section">
+        <div className="container">
+          <div className="object-main-grid">
+            {/* Left */}
+            <div className="object-main-content">
+              {object.catalog_name && <span className="object-catalog">{object.catalog_name}</span>}
 
-              <span className="object-detail-type">{TYPE_LABELS[object.type] ?? object.type}</span>
-            </div>
+              <h1 className="display-en object-main-title">{object.name_en}</h1>
 
-            <div className="object-detail-heading">
-              {object.catalog_name && (
-                <span className="object-detail-catalog">{object.catalog_name}</span>
-              )}
+              <h2 className="heading-ko object-main-name-ko">{object.name_ko}</h2>
 
-              <h1 className="display-en object-detail-title">{object.name_en}</h1>
+              <div className="object-main-tags">
+                <span className="object-type-chip">{typeLabel}</span>
 
-              <h2 className="heading-ko object-detail-name-ko">{object.name_ko}</h2>
-
-              <div className="object-detail-basic-meta">
-                <span>{TYPE_LABELS[object.type] ?? object.type}</span>
-
-                {object.distance && (
-                  <>
-                    <span className="object-meta-divider">·</span>
-                    <span>{object.distance}</span>
-                  </>
-                )}
+                {object.distance && <span className="object-distance">{object.distance}</span>}
               </div>
 
               {object.description && (
-                <p className="object-detail-description">{object.description}</p>
+                <p className="object-main-description">{object.description}</p>
               )}
-
-              <div className="object-detail-actions">
-                <button type="button" className="button object-favorite-button">
-                  ☆ 관심 천체
-                </button>
-
-                <Link
-                  href={`/observations/new?object=${object.id}`}
-                  className="button button-primary"
-                >
-                  관측 기록하기
-                </Link>
-              </div>
             </div>
+
+            {/* Right */}
+            <aside className="object-info-panel">
+              <span className="object-info-heading">천체 기본 정보</span>
+
+              <dl className="object-info-list">
+                <div>
+                  <dt>분류</dt>
+                  <dd>{typeLabel}</dd>
+                </div>
+
+                <div>
+                  <dt>컬렉션</dt>
+                  <dd>{collectionLabel}</dd>
+                </div>
+
+                {object.catalog_name && (
+                  <div>
+                    <dt>카탈로그</dt>
+                    <dd>{object.catalog_name}</dd>
+                  </div>
+                )}
+
+                <div>
+                  <dt>거리</dt>
+                  <dd>{object.distance || "-"}</dd>
+                </div>
+
+                <div>
+                  <dt>겉보기 등급</dt>
+                  <dd>{object.magnitude !== null ? object.magnitude : "-"}</dd>
+                </div>
+              </dl>
+            </aside>
           </div>
-        </div>
-      </section>
 
-      {/* TODAY OBSERVATION */}
-      <section className="object-detail-section">
-        <div className="container">
-          <p className="section-label">TONIGHT</p>
+          {/* ======================================
+              TONIGHT OBSERVATION
+          ====================================== */}
+          <div className="object-observation-area">
+            <p className="object-sub-label">오늘의 관측 정보</p>
 
-          <h2 className="heading-ko object-section-title">오늘의 관측 정보</h2>
+            <div className="object-observation-grid">
+              {observationInfo.map(item => (
+                <article className="object-observation-card" key={item.label}>
+                  <span>{item.label}</span>
 
-          <div className="object-observation-grid">
-            {observationMeta.map(item => (
-              <article className="object-observation-card" key={item.label}>
-                <span>{item.label}</span>
-                <strong>{item.value}</strong>
-              </article>
-            ))}
+                  <strong
+                    className={
+                      item.accent ? "object-observation-value accent" : "object-observation-value"
+                    }
+                  >
+                    {item.value}
+                  </strong>
+                </article>
+              ))}
+            </div>
+
+            <p className="object-observation-notice">
+              고도, 방위, 관측 조건은 현재 UI 구현을 위한 임시 데이터이며 이후 천문 API와
+              연결됩니다.
+            </p>
           </div>
 
-          <p className="object-observation-notice">
-            현재 고도, 방위, 관측 조건은 UI 구현을 위한 임시 데이터입니다. 이후 천문 API와 연결할
-            예정입니다.
-          </p>
-        </div>
-      </section>
-
-      {/* PERSONAL AREA */}
-      <section className="object-detail-section object-personal-section">
-        <div className="container">
-          <p className="section-label">MY OBSERVATION</p>
-
-          <h2 className="heading-ko object-section-title">나의 관측 기록</h2>
-
+          {/* ======================================
+              PERSONAL OBSERVATION
+          ====================================== */}
           <div className="object-personal-card">
-            <div className="object-personal-empty">
-              <span className="object-personal-symbol">✦</span>
+            <div className="object-personal-content">
+              <span className="object-personal-label">나의 관측 기록</span>
 
-              <div>
-                <strong>아직 관측하지 않은 천체입니다.</strong>
+              <strong className="object-unobserved">아직 관측하지 않은 천체입니다.</strong>
 
-                <p>첫 관측 기록을 남기면 나의 천체 도감에 자동으로 추가됩니다.</p>
-              </div>
+              <p>첫 관측 기록을 남기면 이 천체가 나의 천체 도감에 자동으로 추가됩니다.</p>
             </div>
 
+            <div className="object-personal-preview">
+              <img src={image} alt="" />
+            </div>
+          </div>
+
+          {/* ======================================
+              ACTIONS
+          ====================================== */}
+          <div className="object-bottom-actions">
             <Link
               href={`/observations/new?object=${object.id}`}
-              className="button button-secondary"
+              className="button button-primary object-record-button"
             >
-              첫 관측 기록하기
+              관측 기록하기
             </Link>
+
+            <button type="button" className="button object-favorite-button">
+              ☆ 관심 천체 추가
+            </button>
           </div>
         </div>
       </section>
