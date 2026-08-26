@@ -1184,6 +1184,69 @@ img {
 }
 
 /* ========================================
+   PAGINATION
+======================================== */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 8px;
+
+  margin-top: 48px;
+}
+
+.pagination-button,
+.pagination-arrow {
+  width: 38px;
+  height: 38px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  transition:
+    color 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.pagination-button:hover,
+.pagination-arrow:hover:not(:disabled) {
+  color: var(--text-primary);
+
+  border-color: rgba(167, 139, 250, 0.35);
+
+  transform: translateY(-1px);
+}
+
+.pagination-button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+
+  color: #080b14;
+
+  font-weight: 600;
+}
+
+.pagination-arrow:disabled {
+  opacity: 0.3;
+
+  cursor: default;
+}
+
+/* ========================================
    EXPLORE - TABLET
 ======================================== */
 
@@ -1262,5 +1325,431 @@ img {
 
   .celestial-card-image-wrapper {
     height: 230px;
+  }
+}
+
+/* ----------------------------------------- */
+
+/* ========================================
+   OBJECT DETAIL
+======================================== */
+
+.object-detail-page {
+  min-height: 100vh;
+}
+
+/* ========================================
+   OBJECT DETAIL - HERO
+======================================== */
+
+.object-detail-hero {
+  padding: 54px 0 92px;
+}
+
+.object-back-link {
+  display: inline-flex;
+  align-items: center;
+
+  margin-bottom: 30px;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+
+  transition: color 0.2s ease;
+}
+
+.object-back-link:hover {
+  color: var(--primary);
+}
+
+.object-detail-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
+
+  gap: 70px;
+
+  align-items: center;
+}
+
+/* Image */
+
+.object-detail-image-wrapper {
+  position: relative;
+
+  min-height: 560px;
+
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 18px;
+
+  background: #05070d;
+}
+
+.object-detail-image {
+  width: 100%;
+  height: 560px;
+
+  object-fit: cover;
+}
+
+.object-detail-type {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+
+  padding: 7px 11px;
+
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  border-radius: 999px;
+
+  background: rgba(8, 11, 20, 0.72);
+
+  color: var(--primary);
+
+  backdrop-filter: blur(12px);
+
+  font-size: 10px;
+}
+
+/* Heading */
+
+.object-detail-heading {
+  min-width: 0;
+}
+
+.object-detail-catalog {
+  display: block;
+
+  margin-bottom: 16px;
+
+  color: var(--primary);
+
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+}
+
+.object-detail-title {
+  margin: 0;
+
+  font-size: clamp(52px, 5.5vw, 78px);
+  font-weight: 600;
+
+  line-height: 0.98;
+  letter-spacing: -0.04em;
+}
+
+.object-detail-name-ko {
+  margin: 18px 0 0;
+
+  color: var(--text-primary);
+
+  font-size: 26px;
+  font-weight: 500;
+}
+
+.object-detail-basic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+
+  gap: 10px;
+
+  margin-top: 24px;
+
+  color: var(--secondary);
+
+  font-size: 12px;
+}
+
+.object-meta-divider {
+  color: var(--text-muted);
+}
+
+.object-detail-description {
+  max-width: 560px;
+
+  margin: 32px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 14px;
+  line-height: 1.9;
+}
+
+.object-detail-actions {
+  display: flex;
+
+  gap: 12px;
+
+  margin-top: 38px;
+}
+
+.object-favorite-button {
+  border: 1px solid var(--border);
+
+  background: var(--surface);
+
+  color: var(--text-primary);
+
+  cursor: pointer;
+}
+
+.object-favorite-button:hover {
+  border-color: rgba(167, 139, 250, 0.4);
+
+  background: var(--surface-elevated);
+
+  color: var(--primary);
+}
+
+/* ========================================
+   DETAIL SECTIONS
+======================================== */
+
+.object-detail-section {
+  padding: 80px 0;
+
+  border-top: 1px solid var(--border);
+}
+
+.object-section-title {
+  margin: 0 0 32px;
+
+  font-size: clamp(32px, 4vw, 44px);
+  font-weight: 500;
+}
+
+/* Observation meta */
+
+.object-observation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 14px;
+}
+
+.object-observation-card {
+  min-height: 150px;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+
+  padding: 24px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface);
+}
+
+.object-observation-card span {
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+.object-observation-card strong {
+  color: var(--text-primary);
+
+  font-size: 30px;
+  font-weight: 500;
+}
+
+.object-observation-notice {
+  margin: 16px 0 0;
+
+  color: #666e7d;
+
+  font-size: 11px;
+}
+
+/* ========================================
+   PERSONAL OBSERVATION
+======================================== */
+
+.object-personal-section {
+  padding-bottom: 120px;
+}
+
+.object-personal-card {
+  min-height: 150px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 30px;
+
+  padding: 28px 32px;
+
+  border: 1px solid var(--border);
+  border-radius: 16px;
+
+  background: var(--surface);
+}
+
+.object-personal-empty {
+  display: flex;
+  align-items: center;
+
+  gap: 20px;
+}
+
+.object-personal-symbol {
+  flex-shrink: 0;
+
+  width: 48px;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(167, 139, 250, 0.2);
+  border-radius: 50%;
+
+  background: rgba(167, 139, 250, 0.08);
+
+  color: var(--primary);
+
+  font-size: 18px;
+}
+
+.object-personal-empty strong {
+  color: var(--text-primary);
+
+  font-size: 15px;
+}
+
+.object-personal-empty p {
+  margin: 7px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+/* ========================================
+   OBJECT DETAIL - TABLET
+======================================== */
+
+@media (max-width: 1024px) {
+  .object-detail-hero-grid {
+    grid-template-columns: 1fr 1fr;
+
+    gap: 38px;
+  }
+
+  .object-detail-image-wrapper {
+    min-height: 460px;
+  }
+
+  .object-detail-image {
+    height: 460px;
+  }
+
+  .object-detail-title {
+    font-size: 52px;
+  }
+
+  .object-observation-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* ========================================
+   OBJECT DETAIL - MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .object-detail-hero {
+    padding: 36px 0 64px;
+  }
+
+  .object-back-link {
+    margin-bottom: 22px;
+  }
+
+  .object-detail-hero-grid {
+    grid-template-columns: 1fr;
+
+    gap: 34px;
+  }
+
+  .object-detail-image-wrapper {
+    min-height: 390px;
+  }
+
+  .object-detail-image {
+    height: 390px;
+  }
+
+  .object-detail-title {
+    font-size: 48px;
+  }
+
+  .object-detail-name-ko {
+    font-size: 22px;
+  }
+
+  .object-detail-actions {
+    flex-direction: column;
+  }
+
+  .object-detail-actions .button {
+    width: 100%;
+  }
+
+  .object-detail-section {
+    padding: 60px 0;
+  }
+
+  .object-observation-grid {
+    grid-template-columns: repeat(2, 1fr);
+
+    gap: 10px;
+  }
+
+  .object-observation-card {
+    min-height: 125px;
+
+    padding: 18px;
+  }
+
+  .object-observation-card strong {
+    font-size: 25px;
+  }
+
+  .object-personal-card {
+    align-items: stretch;
+    flex-direction: column;
+
+    padding: 24px;
+  }
+
+  .object-personal-card .button {
+    width: 100%;
+  }
+}
+
+/* ========================================
+   SMALL MOBILE
+======================================== */
+
+@media (max-width: 420px) {
+  .object-observation-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .object-detail-image-wrapper {
+    min-height: 330px;
+  }
+
+  .object-detail-image {
+    height: 330px;
   }
 }

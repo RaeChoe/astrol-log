@@ -43,8 +43,10 @@ Server Component
 - 필터 초기화 버튼으로 전체 천체 목록으로 복귀 가능
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CelestialCard from "./CelestialCard";
+
+const ITEMS_PER_PAGE = 8;
 
 const FILTERS = [
   { value: "all", label: "전체" },
@@ -58,6 +60,7 @@ const FILTERS = [
 export default function ExploreClient({ objects }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedFilter, setSelectedFilter] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredObjects = useMemo(() => {
     const keyword = searchTerm.trim().toLowerCase();
@@ -94,6 +97,19 @@ export default function ExploreClient({ objects }) {
       return matchesSearch && matchesFilter;
     });
   }, [objects, searchTerm, selectedFilter]);
+
+  const totalPages = Math.ceil(filteredObjects.length / ITEMS_PER_PAGE);
+
+  const paginatedObjects = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+
+    return filteredObjects.slice(startIndex, endIndex);
+  }, [filteredObjects, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedFilter]);
 
   return (
     <main className="explore-page">
@@ -144,11 +160,50 @@ export default function ExploreClient({ objects }) {
           </div>
 
           {filteredObjects.length > 0 ? (
-            <div className="celestial-grid">
-              {filteredObjects.map(object => (
-                <CelestialCard key={object.id} object={object} />
-              ))}
-            </div>
+            <>
+              <div className="celestial-grid">
+                {paginatedObjects.map(object => (
+                  <CelestialCard key={object.id} object={object} />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <nav className="pagination" aria-label="천체 목록 페이지">
+                  <button
+                    type="button"
+                    className="pagination-arrow"
+                    onClick={() => setCurrentPage(page => Math.max(page - 1, 1))}
+                    disabled={currentPage === 1}
+                    aria-label="이전 페이지"
+                  >
+                    ‹
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, index) => index + 1).map(page => (
+                    <button
+                      key={page}
+                      type="button"
+                      className={
+                        currentPage === page ? "pagination-button active" : "pagination-button"
+                      }
+                      onClick={() => setCurrentPage(page)}
+                    >
+                      {page}
+                    </button>
+                  ))}
+
+                  <button
+                    type="button"
+                    className="pagination-arrow"
+                    onClick={() => setCurrentPage(page => Math.min(page + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    aria-label="다음 페이지"
+                  >
+                    ›
+                  </button>
+                </nav>
+              )}
+            </>
           ) : (
             <div className="explore-empty">
               <span>✦</span>

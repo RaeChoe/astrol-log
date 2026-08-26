@@ -45,9 +45,9 @@ export default function CelestialCard({ object }) {
         </div>
 
         <div className="celestial-card-meta">
-          {object.distance && <span>{object.distance}</span>}
+          <span>{TYPE_LABELS[object.type] ?? object.type}</span>
 
-          {object.magnitude !== null && <span>Mag {object.magnitude}</span>}
+          {object.distance && <span>{object.distance}</span>}
         </div>
       </div>
     </Link>
