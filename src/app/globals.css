@@ -176,6 +176,134 @@ img {
 }
 
 /* ========================================
+   HEADER AUTH
+======================================== */
+
+.header-auth {
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+}
+
+/* ========================================
+   HEADER PROFILE
+======================================== */
+
+.header-profile {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+}
+
+/* Avatar */
+
+.header-avatar-link {
+  flex-shrink: 0;
+
+  display: block;
+
+  border-radius: 50%;
+}
+
+.header-avatar {
+  width: 36px;
+  height: 36px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+
+  color: #080b14;
+
+  font-size: 13px;
+  font-weight: 700;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.header-avatar-link:hover .header-avatar {
+  transform: translateY(-1px);
+
+  box-shadow: 0 6px 18px rgba(167, 139, 250, 0.2);
+}
+
+/* Uploaded avatar */
+
+.header-avatar-image {
+  width: 36px;
+  height: 36px;
+
+  border-radius: 50%;
+
+  object-fit: cover;
+
+  border: 1px solid rgba(167, 139, 250, 0.25);
+}
+
+/* ========================================
+   PROFILE INFORMATION
+======================================== */
+
+.header-profile-info {
+  display: flex;
+  flex-direction: column;
+
+  gap: 2px;
+}
+
+.header-nickname {
+  max-width: 110px;
+
+  overflow: hidden;
+
+  color: var(--text-primary);
+
+  font-size: 11px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Logout */
+
+.header-logout-button {
+  width: fit-content;
+
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  font-size: 9px;
+
+  transition: color 0.2s ease;
+}
+
+.header-logout-button:hover:not(:disabled) {
+  color: var(--primary);
+}
+
+.header-logout-button:disabled {
+  opacity: 0.5;
+
+  cursor: default;
+}
+
+/* ========================================
    TODAY PAGE
 ======================================== */
 

@@ -1,42 +1,42 @@
-"use client";
+import { createClient } from "@/lib/supabase/server";
+import HeaderClient from "./HeaderClient";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+export default async function Header() {
+  const supabase = await createClient();
 
-export default function Header() {
-  const pathname = usePathname();
+  /*
+   * 현재 로그인 사용자 조회
+   *
+   * getUser():
+   * - Supabase Auth 서버에 사용자 정보를 확인
+   * - 로그인 상태 확인에 사용
+   */
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const navItems = [
-    { href: "/", label: "Today" },
-    { href: "/explore", label: "Explore" },
-    { href: "/collection", label: "Collection" },
-    { href: "/observations", label: "Observations" },
-  ];
+  let profile = null;
 
-  return (
-    <header className="site-header">
-      <div className="container header-inner">
-        <Link href="/" className="logo">
-          <span className="logo-symbol">✦</span>
-          AstroLog
-        </Link>
+  /*
+   * 로그인된 사용자가 있을 경우 profiles 조회
+   *
+   * profiles 테이블은 auth.users와 user_id로 연결되어 있음.
+   * Header에서는 닉네임과 프로필 이미지만 필요하므로
+   * 필요한 컬럼만 조회.
+   */
+  if (user) {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("nickname, avatar_url")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-        <nav className="desktop-nav">
-          {navItems.map(item => {
-            const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+    if (error) {
+      console.error("프로필 조회 오류:", error);
+    }
 
-            return (
-              <Link key={item.href} href={item.href} className={active ? "active" : ""}>
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+    profile = data;
+  }
 
-        <Link href="/login" className="login-link">
-          로그인
-        </Link>
-      </div>
-    </header>
-  );
+  return <HeaderClient user={user} profile={profile} />;
 }
