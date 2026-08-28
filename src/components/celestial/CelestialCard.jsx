@@ -4,13 +4,6 @@ const FALLBACK_IMAGES = {
   moon: "/images/home/moon.png",
   saturn: "/images/home/saturn.png",
   m31: "/images/home/m31.png",
-
-  // jupiter: "/images/celestial/jupiter.png",
-  // mars: "/images/celestial/mars.png",
-  // m42: "/images/celestial/m42.png",
-  // m45: "/images/celestial/m45.png",
-  // sirius: "/images/celestial/sirius.png",
-  // betelgeuse: "/images/celestial/betelgeuse.png",
 };
 
 const TYPE_LABELS = {
@@ -22,30 +15,43 @@ const TYPE_LABELS = {
   galaxy: "Galaxy",
 };
 
-export default function CelestialCard({ object }) {
+export default function CelestialCard({ object, observed = false, isLoggedIn = false }) {
   const image = object.image_url || FALLBACK_IMAGES[object.external_id] || "/images/home/hero.png";
 
-  return (
-    <Link href={`/objects/${object.id}`} className="celestial-card">
-      <div className="celestial-card-image-wrapper">
-        <img src={image} alt={object.name_ko} className="celestial-card-image" />
+  const typeLabel = TYPE_LABELS[object.type] || object.type;
 
-        <span className="celestial-card-type">{TYPE_LABELS[object.type] ?? object.type}</span>
+  return (
+    <Link
+      href={`/objects/${object.id}`}
+      className={observed ? "celestial-card observed" : "celestial-card"}
+    >
+      <div className="celestial-card-image-wrapper">
+        <img className="celestial-card-image" src={image} alt={object.name_ko || object.name_en} />
+
+        <span className="celestial-card-type">{typeLabel}</span>
+
+        {isLoggedIn && (
+          <span
+            className={
+              observed ? "celestial-observation-status observed" : "celestial-observation-status"
+            }
+          >
+            {observed ? "✓ 관측 완료" : "○ 미관측"}
+          </span>
+        )}
       </div>
 
       <div className="celestial-card-content">
         <div>
-          <span className="celestial-catalog">
-            {object.catalog_name || TYPE_LABELS[object.type]}
-          </span>
+          <span className="celestial-catalog">{object.catalog_name || typeLabel}</span>
 
-          <h2 className="display-en">{object.name_en}</h2>
+          <h2>{object.name_en}</h2>
 
           <p>{object.name_ko}</p>
         </div>
 
         <div className="celestial-card-meta">
-          <span>{TYPE_LABELS[object.type] ?? object.type}</span>
+          <span>{typeLabel}</span>
 
           {object.distance && <span>{object.distance}</span>}
         </div>

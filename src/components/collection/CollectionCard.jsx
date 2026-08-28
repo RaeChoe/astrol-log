@@ -1,14 +1,5 @@
 import Link from "next/link";
 
-const TYPE_LABELS = {
-  planet: "행성",
-  moon: "위성",
-  star: "별",
-  cluster: "성단",
-  nebula: "성운",
-  galaxy: "은하",
-};
-
 const FALLBACK_IMAGES = {
   moon: "/images/home/moon.png",
   saturn: "/images/home/saturn.png",
@@ -21,63 +12,40 @@ export default function CollectionCard({ object }) {
   return (
     <Link
       href={`/objects/${object.id}`}
-      className={object.observed ? "collection-card observed" : "collection-card unobserved"}
+      className={
+        object.observed ? "collection-mini-card observed" : "collection-mini-card unobserved"
+      }
     >
-      <div className="collection-card-image-wrapper">
-        <img src={image} alt={object.name_ko || object.name_en} className="collection-card-image" />
-
-        <div className="collection-card-image-overlay" />
-
-        <span className={object.observed ? "collection-status observed" : "collection-status"}>
-          {object.observed ? "✓ 관측 완료" : "○ 미관측"}
-        </span>
-
-        <span className="collection-card-type">{TYPE_LABELS[object.type] || object.type}</span>
+      <div className="collection-mini-image">
+        <img src={image} alt={object.name_ko || object.name_en} />
 
         {!object.observed && (
-          <div className="collection-lock">
-            <span>✦</span>
+          <div className="collection-mini-lock">
+            <span />
           </div>
         )}
+
+        {object.observed && <span className="collection-mini-check">✓</span>}
       </div>
 
-      <div className="collection-card-content">
-        <div>
-          <span className="celestial-catalog">{object.catalog_name || "CELESTIAL OBJECT"}</span>
+      <div className="collection-mini-content">
+        <strong>{getCardTitle(object)}</strong>
 
-          <h3>{object.name_en}</h3>
-
-          <p>{object.name_ko}</p>
-        </div>
-
-        <div className="collection-card-footer">
-          {object.observed ? (
-            <>
-              <span>관측 {object.observationCount}회</span>
-
-              <span>최근 {formatDate(object.lastObservedAt)}</span>
-            </>
-          ) : (
-            <>
-              <span>아직 만나지 못한 천체</span>
-
-              <strong>관측하러 가기 →</strong>
-            </>
-          )}
-        </div>
+        <span>{object.name_ko}</span>
       </div>
     </Link>
   );
 }
 
-function formatDate(value) {
-  if (!value) {
-    return "-";
+function getCardTitle(object) {
+  /*
+   * Messier object는
+   * M31 / M42 / M45처럼
+   * catalog_name을 우선 노출
+   */
+  if (object.collection_group === "messier" && object.catalog_name) {
+    return object.catalog_name;
   }
 
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
+  return object.name_en || object.catalog_name || object.name_ko || "Unknown";
 }

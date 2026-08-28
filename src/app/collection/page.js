@@ -6,29 +6,40 @@ export const metadata = {
   title: "Collection | AstroLog",
 };
 
+const GROUPS = [
+  {
+    key: "solar_system",
+    title: "태양계",
+  },
+  {
+    key: "messier",
+    title: "Messier Objects",
+  },
+  {
+    key: "star",
+    title: "별",
+  },
+];
+
 export default async function CollectionPage() {
   const user = await requireUser("/collection");
 
   const supabase = await createClient();
 
-  /*
-   * 전체 천체와 현재 사용자의 관측 기록을 동시에 조회
-   */
   const [objectsResult, observationsResult] = await Promise.all([
     supabase
       .from("celestial_objects")
       .select(
         `
-        id,
-        catalog_name,
-        name_en,
-        name_ko,
-        type,
-        collection_group,
-        distance,
-        image_url,
-        external_id
-      `,
+          id,
+          catalog_name,
+          name_en,
+          name_ko,
+          type,
+          collection_group,
+          image_url,
+          external_id
+        `,
       )
       .order("id"),
 
@@ -36,10 +47,10 @@ export default async function CollectionPage() {
       .from("observations")
       .select(
         `
-        id,
-        celestial_object_id,
-        observed_at
-      `,
+          id,
+          celestial_object_id,
+          observed_at
+        `,
       )
       .eq("user_id", user.id)
       .order("observed_at", {
@@ -56,18 +67,12 @@ export default async function CollectionPage() {
   }
 
   const objects = objectsResult.data || [];
+
   const observations = observationsResult.data || [];
 
   /*
    * celestial_object_id 기준으로
-   * 관측 정보를 묶는다.
-   *
-   * Map:
-   * objectId →
-   * {
-   *   count,
-   *   lastObservedAt
-   * }
+   * 관측 횟수 / 최근 관측일 계산
    */
   const observationMap = new Map();
 
@@ -88,21 +93,17 @@ export default async function CollectionPage() {
     current.count += 1;
   });
 
-  /*
-   * 각 celestial object에
-   * 관측 여부 및 통계 추가
-   */
   const collectionObjects = objects.map(object => {
-    const observationInfo = observationMap.get(object.id);
+    const info = observationMap.get(object.id);
 
     return {
       ...object,
 
-      observed: Boolean(observationInfo),
+      observed: Boolean(info),
 
-      observationCount: observationInfo?.count || 0,
+      observationCount: info?.count || 0,
 
-      lastObservedAt: observationInfo?.lastObservedAt || null,
+      lastObservedAt: info?.lastObservedAt || null,
     };
   });
 
@@ -112,41 +113,29 @@ export default async function CollectionPage() {
 
   const progress = totalCount > 0 ? Math.round((observedCount / totalCount) * 100) : 0;
 
-  /*
-   * 관측 완료한 천체를 먼저 표시
-   */
-  const sortedObjects = [...collectionObjects].sort((a, b) => {
-    if (a.observed === b.observed) {
-      return a.id - b.id;
-    }
-
-    return a.observed ? -1 : 1;
-  });
-
   return (
     <main className="collection-page">
-      <section className="container collection-hero">
-        <span className="section-label">CELESTIAL COLLECTION</span>
+      <section className="container collection-header">
+        <span className="section-label">MY COLLECTION</span>
 
-        <div className="collection-hero-grid">
-          <div className="collection-heading">
-            <h1 className="display-en">Collection</h1>
+        <h1 className="heading-ko">나의 천체 도감</h1>
 
-            <p>밤하늘에서 직접 만난 천체들을 하나씩 기록하고 도감을 완성해보세요.</p>
+        <div className="collection-overall">
+          <div className="collection-overall-count">
+            <span>OBJECTS OBSERVED</span>
+
+            <p>
+              <strong>{observedCount}</strong>
+
+              <span>/ {totalCount}</span>
+            </p>
           </div>
 
-          <div className="collection-progress-panel">
-            <div className="collection-progress-top">
-              <div>
-                <span>COLLECTION PROGRESS</span>
+          <div className="collection-overall-progress">
+            <div className="collection-overall-progress-head">
+              <span>전체 수집 현황</span>
 
-                <strong>{progress}%</strong>
-              </div>
-
-              <p>
-                <strong>{observedCount}</strong>
-                <span> / {totalCount}</span>
-              </p>
+              <strong>{progress}%</strong>
             </div>
 
             <div className="collection-progress-track">
@@ -157,71 +146,46 @@ export default async function CollectionPage() {
                 }}
               />
             </div>
-
-            <p className="collection-progress-description">
-              {getProgressMessage(progress, observedCount)}
-            </p>
           </div>
         </div>
       </section>
 
-      <section className="container collection-content">
-        <div className="collection-section-heading">
-          <div>
-            <span className="section-label">YOUR DISCOVERIES</span>
+      <section className="container collection-groups">
+        {GROUPS.map(group => {
+          const groupObjects = collectionObjects.filter(
+            object => object.collection_group === group.key,
+          );
 
-            <h2>나의 천체 도감</h2>
-          </div>
+          if (!groupObjects.length) {
+            return null;
+          }
 
-          <div className="collection-legend">
-            <span>
-              <i className="collection-legend-dot observed" />
-              관측 완료
-            </span>
+          const groupObserved = groupObjects.filter(object => object.observed).length;
 
-            <span>
-              <i className="collection-legend-dot" />
-              미관측
-            </span>
-          </div>
-        </div>
+          return (
+            <section key={group.key} className="collection-group">
+              <div className="collection-group-header">
+                <div>
+                  <h2>{group.title}</h2>
 
-        {sortedObjects.length ? (
-          <div className="collection-grid">
-            {sortedObjects.map(object => (
-              <CollectionCard key={object.id} object={object} />
-            ))}
-          </div>
-        ) : (
-          <div className="collection-empty">
-            <span>✦</span>
+                  <p>{groupObserved}개 관측 완료</p>
+                </div>
 
-            <h2>등록된 천체가 없습니다</h2>
+                <strong>
+                  {groupObserved}
+                  <span> / {groupObjects.length}</span>
+                </strong>
+              </div>
 
-            <p>천체 데이터가 추가되면 이곳에 도감이 표시됩니다.</p>
-          </div>
-        )}
+              <div className="collection-group-grid">
+                {groupObjects.map(object => (
+                  <CollectionCard key={object.id} object={object} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
       </section>
     </main>
   );
-}
-
-function getProgressMessage(progress, observedCount) {
-  if (progress === 100) {
-    return "모든 천체를 관측했습니다. 도감 완성!";
-  }
-
-  if (progress >= 70) {
-    return "도감 완성이 얼마 남지 않았어요.";
-  }
-
-  if (progress >= 40) {
-    return "밤하늘의 절반 가까이를 만나고 있어요.";
-  }
-
-  if (observedCount > 0) {
-    return "좋은 시작이에요. 다음 천체를 찾아보세요.";
-  }
-
-  return "첫 번째 천체를 관측하면 도감이 시작됩니다.";
 }

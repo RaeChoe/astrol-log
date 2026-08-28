@@ -3,13 +3,23 @@ import ExploreClient from "@/components/celestial/ExploreClient";
 
 export const metadata = {
   title: "Explore | AstroLog",
-  description: "밤하늘의 천체들을 탐색해보세요.",
 };
 
 export default async function ExplorePage() {
   const supabase = await createClient();
 
-  const { data: objects, error } = await supabase
+  /*
+   * Explore는 로그인하지 않아도 볼 수 있는 페이지.
+   * 로그인 사용자인 경우에만 관측 상태를 추가한다.
+   */
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  /*
+   * 전체 천체 조회
+   */
+  const { data: objects, error: objectsError } = await supabase
     .from("celestial_objects")
     .select(
       `
@@ -19,24 +29,49 @@ export default async function ExplorePage() {
       name_ko,
       type,
       collection_group,
+      description,
       distance,
       magnitude,
       image_url,
       external_id
     `,
     )
-    .order("id", { ascending: true });
+    .order("id");
 
-  if (error) {
-    return (
-      <main className="explore-page">
-        <div className="container explore-error">
-          <h1 className="display-en">Explore the night sky.</h1>
-          <p>천체 정보를 불러오지 못했습니다.</p>
-        </div>
-      </main>
-    );
+  if (objectsError) {
+    console.error("Explore 천체 조회 오류:", objectsError);
   }
 
-  return <ExploreClient objects={objects ?? []} />;
+  /*
+   * 로그인 사용자라면
+   * 어떤 천체를 관측했는지 조회
+   */
+  let observedObjectIds = [];
+
+  if (user) {
+    const { data: observations, error: observationsError } = await supabase
+      .from("observations")
+      .select("celestial_object_id")
+      .eq("user_id", user.id);
+
+    if (observationsError) {
+      console.error("Explore 관측 상태 조회 오류:", observationsError);
+    } else {
+      /*
+       * 같은 천체를 여러 번 관측해도
+       * Explore에서는 한 번만 관측 완료 처리.
+       */
+      observedObjectIds = [
+        ...new Set((observations || []).map(observation => observation.celestial_object_id)),
+      ];
+    }
+  }
+
+  return (
+    <ExploreClient
+      objects={objects || []}
+      observedObjectIds={observedObjectIds}
+      isLoggedIn={Boolean(user)}
+    />
+  );
 }
