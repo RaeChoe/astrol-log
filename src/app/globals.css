@@ -2116,6 +2116,203 @@ img {
 }
 
 /* ========================================
+   OBJECT PERSONAL - REAL OBSERVATION
+======================================== */
+
+.object-personal-card-observed {
+  border-color: rgba(167, 139, 250, 0.3);
+
+  background: linear-gradient(90deg, rgba(167, 139, 250, 0.075), rgba(16, 21, 33, 0.96));
+}
+
+/* ========================================
+   OBSERVED HEADING
+======================================== */
+
+.object-personal-observed-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin-top: 2px;
+}
+
+.object-personal-observed-heading strong {
+  color: var(--text-primary);
+
+  font-family: var(--font-noto-serif-kr), serif;
+
+  font-size: 20px;
+  font-weight: 500;
+}
+
+.object-personal-observed-heading > span {
+  display: inline-flex;
+  align-items: center;
+
+  min-height: 25px;
+
+  padding: 0 9px;
+
+  border: 1px solid rgba(167, 139, 250, 0.22);
+
+  border-radius: 999px;
+
+  background: rgba(167, 139, 250, 0.08);
+
+  color: var(--primary);
+
+  font-size: 12px;
+}
+
+/* ========================================
+   DATE / LOCATION
+======================================== */
+
+.object-personal-observation-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin-top: 12px;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+.object-personal-observation-meta i {
+  width: 3px;
+  height: 3px;
+
+  display: block;
+
+  border-radius: 50%;
+
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* ========================================
+   RATING
+======================================== */
+
+.object-personal-rating {
+  display: flex;
+  align-items: center;
+
+  gap: 9px;
+
+  margin-top: 9px;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+.object-personal-stars {
+  color: var(--primary);
+
+  font-size: 13px;
+
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   NOTE
+======================================== */
+
+.object-personal-content .object-personal-note {
+  max-width: 680px;
+
+  margin-top: 12px;
+
+  overflow: hidden;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+  line-height: 1.7;
+
+  text-overflow: ellipsis;
+}
+
+/* ========================================
+   LINKS
+======================================== */
+
+.object-personal-detail-link,
+.object-personal-login-link {
+  display: inline-flex;
+  align-items: center;
+
+  margin-top: 14px;
+
+  color: var(--primary);
+
+  font-size: 12px;
+  font-weight: 500;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.object-personal-detail-link:hover,
+.object-personal-login-link:hover {
+  transform: translateX(3px);
+
+  color: var(--text-primary);
+}
+
+/* ========================================
+   PREVIEW
+======================================== */
+
+.object-personal-preview-link {
+  transition:
+    transform 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.object-personal-preview-link:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(167, 139, 250, 0.4);
+}
+
+/* ========================================
+   PERSONAL OBSERVATION MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .object-personal-card-observed {
+    align-items: flex-start;
+  }
+
+  .object-personal-observed-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .object-personal-observation-meta {
+    gap: 6px;
+  }
+
+  .object-personal-content .object-personal-note {
+    display: -webkit-box;
+
+    overflow: hidden;
+
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* ========================================
    BOTTOM ACTIONS
 ======================================== */
 
