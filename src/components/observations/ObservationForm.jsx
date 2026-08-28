@@ -42,11 +42,10 @@ export default function ObservationForm({
     initialData?.celestial_object_id || "",
   );
 
-  const [observedAt, setObservedAt] = useState(
-    initialData?.observed_at
-      ? toDatetimeLocal(initialData.observed_at)
-      : toDatetimeLocal(new Date().toISOString()),
-  );
+  const initialObservedValue = initialData?.observed_at || new Date().toISOString();
+
+  const [observedDate, setObservedDate] = useState(toLocalDate(initialObservedValue));
+  const [observedTime, setObservedTime] = useState(toLocalTime(initialObservedValue));
 
   const [locationName, setLocationName] = useState(initialData?.location_name || "");
 
@@ -156,6 +155,12 @@ export default function ObservationForm({
       return;
     }
 
+    if (!observedDate || !observedTime) {
+      setErrorMessage("관측 날짜와 시간을 입력해주세요.");
+
+      return;
+    }
+
     if (!locationName.trim()) {
       setErrorMessage("관측 장소를 입력해주세요.");
 
@@ -175,7 +180,7 @@ export default function ObservationForm({
     const payload = {
       celestial_object_id: Number(celestialObjectId),
 
-      observed_at: new Date(observedAt).toISOString(),
+      observed_at: new Date(`${observedDate}T${observedTime}`).toISOString(),
 
       location_name: locationName.trim(),
 
@@ -316,18 +321,36 @@ export default function ObservationForm({
       </div>
 
       <div className="observation-field">
-        <label htmlFor="observation-date">
+        <label>
           관측 일시
           <RequiredMark />
         </label>
 
-        <input
-          id="observation-date"
-          type="datetime-local"
-          value={observedAt}
-          onChange={event => setObservedAt(event.target.value)}
-          required
-        />
+        <div className="observation-datetime-grid">
+          <div className="observation-datetime-item">
+            <span className="observation-sub-label">날짜</span>
+
+            <input
+              id="observation-date"
+              type="date"
+              value={observedDate}
+              onChange={event => setObservedDate(event.target.value)}
+              required
+            />
+          </div>
+
+          <div className="observation-datetime-item">
+            <span className="observation-sub-label">시간</span>
+
+            <input
+              id="observation-time"
+              type="time"
+              value={observedTime}
+              onChange={event => setObservedTime(event.target.value)}
+              required
+            />
+          </div>
+        </div>
       </div>
 
       <div className="observation-field">
@@ -651,12 +674,22 @@ async function deleteObservationImages({ supabase, images }) {
   }
 }
 
-function toDatetimeLocal(value) {
+function toLocalDate(value) {
   const date = new Date(value);
 
   const offset = date.getTimezoneOffset();
 
   const localDate = new Date(date.getTime() - offset * 60 * 1000);
 
-  return localDate.toISOString().slice(0, 16);
+  return localDate.toISOString().slice(0, 10);
+}
+
+function toLocalTime(value) {
+  const date = new Date(value);
+
+  const offset = date.getTimezoneOffset();
+
+  const localDate = new Date(date.getTime() - offset * 60 * 1000);
+
+  return localDate.toISOString().slice(11, 16);
 }

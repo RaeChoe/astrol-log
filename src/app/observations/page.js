@@ -6,6 +6,12 @@ export const metadata = {
   title: "Observations | AstroLog",
 };
 
+const FALLBACK_IMAGES = {
+  moon: "/images/home/moon.png",
+  saturn: "/images/home/saturn.png",
+  m31: "/images/home/m31.png",
+};
+
 export default async function ObservationsPage() {
   const user = await requireUser("/observations");
 
@@ -30,15 +36,53 @@ export default async function ObservationsPage() {
         name_ko,
         image_url,
         external_id
+      ),
+      observation_images (
+        id,
+        image_url,
+        sort_order
       )
     `,
     )
     .eq("user_id", user.id)
-    .order("observed_at", { ascending: false });
+    .order("observed_at", {
+      ascending: false,
+    });
 
   if (error) {
     console.error("관측 기록 조회 오류:", error);
   }
+
+  const observationsWithThumbnail = await Promise.all(
+    (observations || []).map(async observation => {
+      const images = [...(observation.observation_images || [])].sort(
+        (a, b) => (a.sort_order || 0) - (b.sort_order || 0),
+      );
+
+      const firstImage = images[0];
+
+      let thumbnailUrl = null;
+
+      if (firstImage?.image_url) {
+        const { data: signedUrlData } = await supabase.storage
+          .from("observation-images")
+          .createSignedUrl(firstImage.image_url, 60 * 60);
+
+        thumbnailUrl = signedUrlData?.signedUrl || null;
+      }
+
+      const object = observation.celestial_objects;
+
+      const fallbackImage =
+        object?.image_url || FALLBACK_IMAGES[object?.external_id] || "/images/home/hero.png";
+
+      return {
+        ...observation,
+        thumbnailUrl: thumbnailUrl || fallbackImage,
+        hasObservationPhoto: Boolean(thumbnailUrl),
+      };
+    }),
+  );
 
   return (
     <main className="observations-page">
@@ -57,7 +101,7 @@ export default async function ObservationsPage() {
       </section>
 
       <section className="container observations-content">
-        {!observations?.length ? (
+        {!observationsWithThumbnail.length ? (
           <div className="observations-empty">
             <span>✦</span>
 
@@ -71,7 +115,7 @@ export default async function ObservationsPage() {
           </div>
         ) : (
           <div className="observation-list">
-            {observations.map(observation => {
+            {observationsWithThumbnail.map(observation => {
               const object = observation.celestial_objects;
 
               return (
@@ -80,6 +124,21 @@ export default async function ObservationsPage() {
                   href={`/observations/${observation.id}`}
                   className="observation-list-card"
                 >
+                  <div className="observation-list-thumbnail">
+                    <img
+                      src={observation.thumbnailUrl}
+                      alt={
+                        observation.hasObservationPhoto
+                          ? `${object?.name_ko || object?.name_en} 관측 사진`
+                          : `${object?.name_ko || object?.name_en} 이미지`
+                      }
+                    />
+
+                    {observation.hasObservationPhoto && (
+                      <span className="observation-photo-badge">PHOTO</span>
+                    )}
+                  </div>
+
                   <div className="observation-list-date">
                     <strong>{formatDate(observation.observed_at)}</strong>
 
