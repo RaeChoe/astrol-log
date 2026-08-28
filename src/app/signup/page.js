@@ -2,11 +2,24 @@ import Link from "next/link";
 import SignupForm from "@/components/auth/SignupForm";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
 export const metadata = {
   title: "회원가입 | AstroLog",
 };
 
-export default function SignupPage() {
+export default async function SignupPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect("/");
+  }
+
   return (
     <main className="auth-page">
       {/* 화면 왼쪽을 채우는 이미지 */}

@@ -21,9 +21,12 @@
  */
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 export default function GoogleAuthButton() {
+  const searchParams = useSearchParams();
+
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -35,13 +38,17 @@ export default function GoogleAuthButton() {
 
     const supabase = createClient();
 
-    const redirectTo = `${window.location.origin}/auth/callback`;
+    const next = searchParams.get("next") || "/";
+
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+
+    callbackUrl.searchParams.set("next", next);
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
 
       options: {
-        redirectTo,
+        redirectTo: callbackUrl.toString(),
       },
     });
 

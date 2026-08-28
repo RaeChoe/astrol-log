@@ -3,11 +3,28 @@ import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
 import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+
 export const metadata = {
   title: "로그인 | AstroLog",
 };
 
-export default function LoginPage() {
+export default async function LoginPage({ searchParams }) {
+  const params = await searchParams;
+
+  const next = typeof params?.next === "string" && params.next.startsWith("/") ? params.next : "/";
+
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    redirect(next);
+  }
+
   return (
     <main className="auth-page">
       {/* 화면 왼쪽을 채우는 이미지 */}
