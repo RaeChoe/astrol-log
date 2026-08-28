@@ -18,15 +18,39 @@ export default async function NewObservationPage({ searchParams }) {
 
   const supabase = await createClient();
 
+  /*
+   * 관측 폼에서
+   * - 천체 선택
+   * - 관측 대상 카드
+   * 를 모두 표시할 수 있도록
+   * 이름 + 이미지 정보를 함께 조회한다.
+   */
   const { data: objects, error } = await supabase
     .from("celestial_objects")
-    .select("id, catalog_name, name_en, name_ko")
+    .select(
+      `
+      id,
+      catalog_name,
+      name_en,
+      name_ko,
+      image_url,
+      external_id
+    `,
+    )
     .order("name_en");
 
   if (error) {
     console.error("천체 목록 조회 오류:", error);
   }
 
+  /*
+   * Object Detail에서
+   *
+   * /observations/new?object=2
+   *
+   * 형태로 넘어온 경우
+   * 해당 천체를 기본 선택한다.
+   */
   const initialData = objectId
     ? {
         celestial_object_id: objectId,

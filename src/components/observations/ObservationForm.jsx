@@ -28,6 +28,12 @@ const EQUIPMENT_OPTIONS = [
   },
 ];
 
+const FALLBACK_IMAGES = {
+  moon: "/images/home/moon.png",
+  saturn: "/images/home/saturn.png",
+  m31: "/images/home/m31.png",
+};
+
 export default function ObservationForm({
   userId,
   objects = [],
@@ -45,6 +51,7 @@ export default function ObservationForm({
   const initialObservedValue = initialData?.observed_at || new Date().toISOString();
 
   const [observedDate, setObservedDate] = useState(toLocalDate(initialObservedValue));
+
   const [observedTime, setObservedTime] = useState(toLocalTime(initialObservedValue));
 
   const [locationName, setLocationName] = useState(initialData?.location_name || "");
@@ -67,9 +74,23 @@ export default function ObservationForm({
 
   const [errorMessage, setErrorMessage] = useState("");
 
+  /*
+   * 현재 선택된 천체
+   *
+   * select 값을 기준으로 실제 celestial object를 찾아
+   * 관측 대상 카드에 바로 반영한다.
+   */
+  const selectedObject = useMemo(() => {
+    return objects.find(object => String(object.id) === String(celestialObjectId)) || null;
+  }, [objects, celestialObjectId]);
+
+  /*
+   * 새로 추가한 사진의 브라우저 미리보기
+   */
   const newImagePreviews = useMemo(() => {
     return newImages.map(file => ({
       file,
+
       url: URL.createObjectURL(file),
     }));
   }, [newImages]);
@@ -81,6 +102,10 @@ export default function ObservationForm({
 
     setEquipment(nextEquipment);
 
+    /*
+     * 맨눈은 상세 장비가 존재하지 않으므로
+     * 기존 값 초기화
+     */
     if (nextEquipment === "naked_eye") {
       setEquipmentDetail("");
     }
@@ -91,7 +116,9 @@ export default function ObservationForm({
 
     setErrorMessage("");
 
-    if (!files.length) return;
+    if (!files.length) {
+      return;
+    }
 
     const availableCount = MAX_IMAGES - totalImageCount;
 
@@ -145,7 +172,9 @@ export default function ObservationForm({
   const handleSubmit = async event => {
     event.preventDefault();
 
-    if (loading) return;
+    if (loading) {
+      return;
+    }
 
     setErrorMessage("");
 
@@ -195,6 +224,12 @@ export default function ObservationForm({
       note: note.trim() || null,
     };
 
+    /*
+     * ============================
+     * UPDATE
+     * ============================
+     */
+
     if (isEdit) {
       const { error } = await supabase
         .from("observations")
@@ -212,12 +247,17 @@ export default function ObservationForm({
         return;
       }
 
+      /*
+       * 기존 이미지 중
+       * 사용자가 제거한 이미지
+       */
       const deletedImages = initialImages.filter(
         initialImage => !existingImages.some(currentImage => currentImage.id === initialImage.id),
       );
 
       const deleteResult = await deleteObservationImages({
         supabase,
+
         images: deletedImages,
       });
 
@@ -229,11 +269,18 @@ export default function ObservationForm({
         return;
       }
 
+      /*
+       * 새 이미지 추가
+       */
       const uploadResult = await uploadObservationImages({
         supabase,
+
         userId,
+
         observationId: initialData.id,
+
         files: newImages,
+
         startOrder: existingImages.length,
       });
 
@@ -252,10 +299,17 @@ export default function ObservationForm({
       return;
     }
 
+    /*
+     * ============================
+     * CREATE
+     * ============================
+     */
+
     const { data, error } = await supabase
       .from("observations")
       .insert({
         ...payload,
+
         user_id: userId,
       })
       .select("id")
@@ -271,11 +325,19 @@ export default function ObservationForm({
       return;
     }
 
+    /*
+     * observation을 먼저 생성해서
+     * id를 확보한 뒤 이미지 저장
+     */
     const uploadResult = await uploadObservationImages({
       supabase,
+
       userId,
+
       observationId: data.id,
+
       files: newImages,
+
       startOrder: 0,
     });
 
@@ -296,6 +358,33 @@ export default function ObservationForm({
     <form className="observation-form" onSubmit={handleSubmit}>
       {errorMessage && <p className="auth-error">{errorMessage}</p>}
 
+      {/* =========================
+          관측 대상
+      ========================= */}
+
+      {selectedObject && (
+        <section className="observation-target-card">
+          <div className="observation-target-image">
+            <img
+              src={getObjectImage(selectedObject)}
+              alt={selectedObject.name_ko || selectedObject.name_en}
+            />
+          </div>
+
+          <div className="observation-target-content">
+            <span className="observation-target-label">관측 대상</span>
+
+            <strong>{getObjectTitle(selectedObject)}</strong>
+
+            {selectedObject.name_ko && <p>{selectedObject.name_ko}</p>}
+          </div>
+        </section>
+      )}
+
+      {/* =========================
+          천체 선택
+      ========================= */}
+
       <div className="observation-field">
         <label htmlFor="observation-object">
           관측 천체
@@ -312,13 +401,17 @@ export default function ObservationForm({
 
           {objects.map(object => (
             <option key={object.id} value={object.id}>
-              {object.catalog_name ? `${object.catalog_name} · ` : ""}
+              {getObjectTitle(object)}
 
-              {object.name_ko || object.name_en}
+              {object.name_ko ? ` · ${object.name_ko}` : ""}
             </option>
           ))}
         </select>
       </div>
+
+      {/* =========================
+          관측 일시
+      ========================= */}
 
       <div className="observation-field">
         <label>
@@ -353,6 +446,10 @@ export default function ObservationForm({
         </div>
       </div>
 
+      {/* =========================
+          장소
+      ========================= */}
+
       <div className="observation-field">
         <label htmlFor="observation-location">
           관측 장소
@@ -369,6 +466,10 @@ export default function ObservationForm({
           required
         />
       </div>
+
+      {/* =========================
+          관측 장비
+      ========================= */}
 
       <div className="observation-field">
         <label htmlFor="observation-equipment">
@@ -411,6 +512,10 @@ export default function ObservationForm({
         </div>
       )}
 
+      {/* =========================
+          만족도
+      ========================= */}
+
       <div className="observation-field">
         <label>
           관측 만족도
@@ -432,6 +537,10 @@ export default function ObservationForm({
         </div>
       </div>
 
+      {/* =========================
+          관측 시간
+      ========================= */}
+
       <div className="observation-field">
         <label htmlFor="observation-duration">관측 시간</label>
 
@@ -449,6 +558,10 @@ export default function ObservationForm({
           <span>분</span>
         </div>
       </div>
+
+      {/* =========================
+          사진
+      ========================= */}
 
       <div className="observation-field">
         <div className="observation-image-label-row">
@@ -505,6 +618,10 @@ export default function ObservationForm({
         )}
       </div>
 
+      {/* =========================
+          메모
+      ========================= */}
+
       <div className="observation-field">
         <label htmlFor="observation-note">관측 기록</label>
 
@@ -516,6 +633,10 @@ export default function ObservationForm({
           rows={8}
         />
       </div>
+
+      {/* =========================
+          Actions
+      ========================= */}
 
       <div className="observation-form-actions">
         <button
@@ -553,6 +674,30 @@ function ImagePreview({ src, onRemove }) {
       </button>
     </div>
   );
+}
+
+function getObjectImage(object) {
+  return object?.image_url || FALLBACK_IMAGES[object?.external_id] || "/images/home/hero.png";
+}
+
+function getObjectTitle(object) {
+  if (!object) {
+    return "";
+  }
+
+  /*
+   * catalog_name과 name_en이 같은 경우
+   * Jupiter · Jupiter처럼 중복되지 않게 한다.
+   */
+  if (
+    object.catalog_name &&
+    object.name_en &&
+    object.catalog_name.toLowerCase() !== object.name_en.toLowerCase()
+  ) {
+    return `${object.catalog_name} · ${object.name_en}`;
+  }
+
+  return object.name_en || object.catalog_name || object.name_ko || "Unknown Object";
 }
 
 function getEquipmentPlaceholder(equipment) {
@@ -594,6 +739,7 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
         .from("observation-images")
         .upload(storagePath, file, {
           cacheControl: "3600",
+
           upsert: false,
         });
 
@@ -603,6 +749,7 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
 
       uploaded.push({
         path: storagePath,
+
         sort_order: startOrder + index,
       });
     }
@@ -633,6 +780,7 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
 
     return {
       success: false,
+
       message: "관측 사진을 저장하지 못했습니다.",
     };
   }
