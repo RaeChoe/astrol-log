@@ -1,10 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function ObservationForm({ userId, objects = [], initialData = null }) {
+const MAX_IMAGES = 5;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+
+const EQUIPMENT_OPTIONS = [
+  {
+    value: "naked_eye",
+    label: "맨눈",
+  },
+  {
+    value: "binoculars",
+    label: "쌍안경",
+  },
+  {
+    value: "telescope",
+    label: "망원경",
+  },
+  {
+    value: "camera",
+    label: "카메라",
+  },
+];
+
+export default function ObservationForm({
+  userId,
+  objects = [],
+  initialData = null,
+  initialImages = [],
+}) {
   const router = useRouter();
 
   const isEdit = Boolean(initialData?.id);
@@ -23,15 +52,96 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
 
   const [equipment, setEquipment] = useState(initialData?.equipment || "");
 
+  const [equipmentDetail, setEquipmentDetail] = useState(initialData?.equipment_detail || "");
+
   const [rating, setRating] = useState(initialData?.rating || 3);
 
   const [durationMinutes, setDurationMinutes] = useState(initialData?.duration_minutes || "");
 
   const [note, setNote] = useState(initialData?.note || "");
 
+  const [existingImages, setExistingImages] = useState(initialImages);
+
+  const [newImages, setNewImages] = useState([]);
+
   const [loading, setLoading] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
+
+  const newImagePreviews = useMemo(() => {
+    return newImages.map(file => ({
+      file,
+      url: URL.createObjectURL(file),
+    }));
+  }, [newImages]);
+
+  const totalImageCount = existingImages.length + newImages.length;
+
+  const handleEquipmentChange = event => {
+    const nextEquipment = event.target.value;
+
+    setEquipment(nextEquipment);
+
+    if (nextEquipment === "naked_eye") {
+      setEquipmentDetail("");
+    }
+  };
+
+  const handleImageChange = event => {
+    const files = Array.from(event.target.files || []);
+
+    setErrorMessage("");
+
+    if (!files.length) return;
+
+    const availableCount = MAX_IMAGES - totalImageCount;
+
+    if (availableCount <= 0) {
+      setErrorMessage(`관측 사진은 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+
+      event.target.value = "";
+
+      return;
+    }
+
+    const validFiles = [];
+
+    for (const file of files) {
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        setErrorMessage("JPG, PNG, WEBP 이미지만 첨부할 수 있습니다.");
+
+        event.target.value = "";
+
+        return;
+      }
+
+      if (file.size > MAX_IMAGE_SIZE) {
+        setErrorMessage("사진 한 장의 크기는 5MB 이하여야 합니다.");
+
+        event.target.value = "";
+
+        return;
+      }
+
+      validFiles.push(file);
+    }
+
+    if (validFiles.length > availableCount) {
+      setErrorMessage(`관측 사진은 최대 ${MAX_IMAGES}장까지 첨부할 수 있습니다.`);
+    }
+
+    setNewImages(prev => [...prev, ...validFiles.slice(0, availableCount)]);
+
+    event.target.value = "";
+  };
+
+  const removeNewImage = index => {
+    setNewImages(prev => prev.filter((_, imageIndex) => imageIndex !== index));
+  };
+
+  const removeExistingImage = imageId => {
+    setExistingImages(prev => prev.filter(image => image.id !== imageId));
+  };
 
   const handleSubmit = async event => {
     event.preventDefault();
@@ -46,31 +156,40 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
       return;
     }
 
+    if (!locationName.trim()) {
+      setErrorMessage("관측 장소를 입력해주세요.");
+
+      return;
+    }
+
+    if (!equipment) {
+      setErrorMessage("관측 장비를 선택해주세요.");
+
+      return;
+    }
+
     setLoading(true);
 
     const supabase = createClient();
 
     const payload = {
-      celestial_object_id: celestialObjectId,
+      celestial_object_id: Number(celestialObjectId),
 
       observed_at: new Date(observedAt).toISOString(),
 
-      location_name: locationName.trim() || null,
+      location_name: locationName.trim(),
 
-      equipment: equipment.trim() || null,
+      equipment,
+
+      equipment_detail: equipment === "naked_eye" ? null : equipmentDetail.trim() || null,
 
       rating: Number(rating),
 
       duration_minutes: durationMinutes ? Number(durationMinutes) : null,
 
       note: note.trim() || null,
-
-      updated_at: new Date().toISOString(),
     };
 
-    /*
-     * 수정
-     */
     if (isEdit) {
       const { error } = await supabase
         .from("observations")
@@ -88,6 +207,39 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
         return;
       }
 
+      const deletedImages = initialImages.filter(
+        initialImage => !existingImages.some(currentImage => currentImage.id === initialImage.id),
+      );
+
+      const deleteResult = await deleteObservationImages({
+        supabase,
+        images: deletedImages,
+      });
+
+      if (!deleteResult.success) {
+        setErrorMessage("관측 기록은 수정되었지만 일부 사진을 삭제하지 못했습니다.");
+
+        setLoading(false);
+
+        return;
+      }
+
+      const uploadResult = await uploadObservationImages({
+        supabase,
+        userId,
+        observationId: initialData.id,
+        files: newImages,
+        startOrder: existingImages.length,
+      });
+
+      if (!uploadResult.success) {
+        setErrorMessage(uploadResult.message);
+
+        setLoading(false);
+
+        return;
+      }
+
       router.push(`/observations/${initialData.id}`);
 
       router.refresh();
@@ -95,9 +247,6 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
       return;
     }
 
-    /*
-     * 신규 등록
-     */
     const { data, error } = await supabase
       .from("observations")
       .insert({
@@ -117,6 +266,22 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
       return;
     }
 
+    const uploadResult = await uploadObservationImages({
+      supabase,
+      userId,
+      observationId: data.id,
+      files: newImages,
+      startOrder: 0,
+    });
+
+    if (!uploadResult.success) {
+      setErrorMessage(`${uploadResult.message} 관측 기록 자체는 저장되었습니다.`);
+
+      setLoading(false);
+
+      return;
+    }
+
     router.push(`/observations/${data.id}`);
 
     router.refresh();
@@ -126,10 +291,11 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
     <form className="observation-form" onSubmit={handleSubmit}>
       {errorMessage && <p className="auth-error">{errorMessage}</p>}
 
-      {/* 천체 */}
-
       <div className="observation-field">
-        <label htmlFor="observation-object">관측 천체</label>
+        <label htmlFor="observation-object">
+          관측 천체
+          <RequiredMark />
+        </label>
 
         <select
           id="observation-object"
@@ -142,16 +308,18 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
           {objects.map(object => (
             <option key={object.id} value={object.id}>
               {object.catalog_name ? `${object.catalog_name} · ` : ""}
+
               {object.name_ko || object.name_en}
             </option>
           ))}
         </select>
       </div>
 
-      {/* 날짜 */}
-
       <div className="observation-field">
-        <label htmlFor="observation-date">관측 일시</label>
+        <label htmlFor="observation-date">
+          관측 일시
+          <RequiredMark />
+        </label>
 
         <input
           id="observation-date"
@@ -162,40 +330,69 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
         />
       </div>
 
-      {/* 장소 */}
-
       <div className="observation-field">
-        <label htmlFor="observation-location">관측 장소</label>
+        <label htmlFor="observation-location">
+          관측 장소
+          <RequiredMark />
+        </label>
 
         <input
           id="observation-location"
           type="text"
           value={locationName}
           onChange={event => setLocationName(event.target.value)}
-          placeholder="예: 서울 한강공원"
-          maxLength={100}
-        />
-      </div>
-
-      {/* 장비 */}
-
-      <div className="observation-field">
-        <label htmlFor="observation-equipment">관측 장비</label>
-
-        <input
-          id="observation-equipment"
-          type="text"
-          value={equipment}
-          onChange={event => setEquipment(event.target.value)}
-          placeholder="예: Celestron NexStar 6SE"
+          placeholder="예: 서울 천문대"
           maxLength={150}
+          required
         />
       </div>
 
-      {/* 관측 만족도 */}
+      <div className="observation-field">
+        <label htmlFor="observation-equipment">
+          관측 장비
+          <RequiredMark />
+        </label>
+
+        <select
+          id="observation-equipment"
+          value={equipment}
+          onChange={handleEquipmentChange}
+          required
+        >
+          <option value="">관측 장비를 선택하세요</option>
+
+          {EQUIPMENT_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {equipment && equipment !== "naked_eye" && (
+        <div className="observation-field">
+          <label htmlFor="observation-equipment-detail">상세 장비</label>
+
+          <input
+            id="observation-equipment-detail"
+            type="text"
+            value={equipmentDetail}
+            onChange={event => setEquipmentDetail(event.target.value)}
+            placeholder={getEquipmentPlaceholder(equipment)}
+            maxLength={150}
+          />
+
+          <span className="observation-field-help">
+            모델명이나 렌즈, 배율 등 상세 정보를 자유롭게 기록할 수 있습니다.
+          </span>
+        </div>
+      )}
 
       <div className="observation-field">
-        <label>관측 만족도</label>
+        <label>
+          관측 만족도
+          <RequiredMark />
+        </label>
 
         <div className="observation-rating">
           {[1, 2, 3, 4, 5].map(value => (
@@ -212,8 +409,6 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
         </div>
       </div>
 
-      {/* 관측 시간 */}
-
       <div className="observation-field">
         <label htmlFor="observation-duration">관측 시간</label>
 
@@ -223,7 +418,7 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
             type="number"
             value={durationMinutes}
             onChange={event => setDurationMinutes(event.target.value)}
-            min="1"
+            min="0"
             max="1440"
             placeholder="60"
           />
@@ -232,7 +427,60 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
         </div>
       </div>
 
-      {/* 메모 */}
+      <div className="observation-field">
+        <div className="observation-image-label-row">
+          <label htmlFor="observation-images">관측 사진</label>
+
+          <span>
+            {totalImageCount} / {MAX_IMAGES}
+          </span>
+        </div>
+
+        <label
+          htmlFor="observation-images"
+          className={
+            totalImageCount >= MAX_IMAGES
+              ? "observation-image-upload disabled"
+              : "observation-image-upload"
+          }
+        >
+          <span className="observation-image-upload-icon">＋</span>
+
+          <strong>관측 사진 추가</strong>
+
+          <p>JPG, PNG, WEBP · 최대 5MB · 최대 5장</p>
+        </label>
+
+        <input
+          id="observation-images"
+          className="observation-image-input"
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          disabled={totalImageCount >= MAX_IMAGES}
+          onChange={handleImageChange}
+        />
+
+        {(existingImages.length > 0 || newImagePreviews.length > 0) && (
+          <div className="observation-image-preview-grid">
+            {existingImages.map(image => (
+              <ImagePreview
+                key={`existing-${image.id}`}
+                src={image.previewUrl}
+                onRemove={() => removeExistingImage(image.id)}
+              />
+            ))}
+
+            {newImagePreviews.map((image, index) => (
+              <ImagePreview
+                key={`new-${image.file.name}-${index}`}
+                src={image.url}
+                onRemove={() => removeNewImage(index)}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="observation-field">
         <label htmlFor="observation-note">관측 기록</label>
@@ -247,7 +495,12 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
       </div>
 
       <div className="observation-form-actions">
-        <button type="button" className="button button-secondary" onClick={() => router.back()}>
+        <button
+          type="button"
+          className="button button-secondary"
+          onClick={() => router.back()}
+          disabled={loading}
+        >
           취소
         </button>
 
@@ -257,6 +510,145 @@ export default function ObservationForm({ userId, objects = [], initialData = nu
       </div>
     </form>
   );
+}
+
+function RequiredMark() {
+  return (
+    <span className="observation-required" aria-hidden="true">
+      *
+    </span>
+  );
+}
+
+function ImagePreview({ src, onRemove }) {
+  return (
+    <div className="observation-image-preview">
+      <img src={src} alt="관측 사진 미리보기" />
+
+      <button type="button" onClick={onRemove} aria-label="사진 삭제">
+        ×
+      </button>
+    </div>
+  );
+}
+
+function getEquipmentPlaceholder(equipment) {
+  switch (equipment) {
+    case "binoculars":
+      return "예: Nikon Action EX 10×50";
+
+    case "telescope":
+      return "예: Celestron NexStar 6SE";
+
+    case "camera":
+      return "예: Sony A7 IV + 200mm";
+
+    default:
+      return "상세 장비를 입력하세요";
+  }
+}
+
+async function uploadObservationImages({ supabase, userId, observationId, files, startOrder = 0 }) {
+  if (!files.length) {
+    return {
+      success: true,
+    };
+  }
+
+  const uploaded = [];
+
+  try {
+    for (let index = 0; index < files.length; index += 1) {
+      const file = files[index];
+
+      const extension = file.name.split(".").pop()?.toLowerCase() || "jpg";
+
+      const uniqueName = `${Date.now()}-${crypto.randomUUID()}.${extension}`;
+
+      const storagePath = `${userId}/${observationId}/${uniqueName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("observation-images")
+        .upload(storagePath, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw uploadError;
+      }
+
+      uploaded.push({
+        path: storagePath,
+        sort_order: startOrder + index,
+      });
+    }
+
+    const { error: dbError } = await supabase.from("observation_images").insert(
+      uploaded.map(image => ({
+        observation_id: observationId,
+
+        image_url: image.path,
+
+        sort_order: image.sort_order,
+      })),
+    );
+
+    if (dbError) {
+      throw dbError;
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("관측 이미지 업로드 오류:", error);
+
+    if (uploaded.length) {
+      await supabase.storage.from("observation-images").remove(uploaded.map(image => image.path));
+    }
+
+    return {
+      success: false,
+      message: "관측 사진을 저장하지 못했습니다.",
+    };
+  }
+}
+
+async function deleteObservationImages({ supabase, images }) {
+  if (!images.length) {
+    return {
+      success: true,
+    };
+  }
+
+  try {
+    const paths = images.map(image => image.image_url);
+
+    const ids = images.map(image => image.id);
+
+    const { error: storageError } = await supabase.storage.from("observation-images").remove(paths);
+
+    if (storageError) {
+      throw storageError;
+    }
+
+    const { error: dbError } = await supabase.from("observation_images").delete().in("id", ids);
+
+    if (dbError) {
+      throw dbError;
+    }
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    console.error("관측 이미지 삭제 오류:", error);
+
+    return {
+      success: false,
+    };
+  }
 }
 
 function toDatetimeLocal(value) {

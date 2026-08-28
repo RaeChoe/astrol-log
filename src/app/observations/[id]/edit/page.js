@@ -15,13 +15,19 @@ export default async function EditObservationPage({ params }) {
 
   const supabase = await createClient();
 
-  const [observationResult, objectsResult] = await Promise.all([
+  const [observationResult, objectsResult, imagesResult] = await Promise.all([
     supabase.from("observations").select("*").eq("id", id).eq("user_id", user.id).maybeSingle(),
 
     supabase
       .from("celestial_objects")
       .select("id, catalog_name, name_en, name_ko")
       .order("name_en"),
+
+    supabase
+      .from("observation_images")
+      .select("id, observation_id, image_url, sort_order")
+      .eq("observation_id", id)
+      .order("sort_order"),
   ]);
 
   const observation = observationResult.data;
@@ -29,6 +35,20 @@ export default async function EditObservationPage({ params }) {
   if (observationResult.error || !observation) {
     notFound();
   }
+
+  const initialImages = await Promise.all(
+    (imagesResult.data || []).map(async image => {
+      const { data: signedUrlData } = await supabase.storage
+        .from("observation-images")
+        .createSignedUrl(image.image_url, 60 * 60);
+
+      return {
+        ...image,
+
+        previewUrl: signedUrlData?.signedUrl || "",
+      };
+    }),
+  );
 
   return (
     <main className="observation-editor-page">
@@ -49,6 +69,7 @@ export default async function EditObservationPage({ params }) {
           userId={user.id}
           objects={objectsResult.data || []}
           initialData={observation}
+          initialImages={initialImages}
         />
       </div>
     </main>

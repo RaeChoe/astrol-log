@@ -316,7 +316,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -348,7 +348,7 @@ img {
 
   cursor: pointer;
 
-  font-size: 11px;
+  font-size: 12px;
   text-align: left;
 
   transition:
@@ -442,7 +442,7 @@ img {
 
   color: var(--primary);
 
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.24em;
 }
@@ -513,6 +513,8 @@ img {
   font-size: 14px;
   font-weight: 600;
 
+  cursor: pointer;
+
   transition:
     transform 0.2s ease,
     background 0.2s ease,
@@ -522,6 +524,11 @@ img {
 
 .button:hover {
   transform: translateY(-2px);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: 0.55;
 }
 
 /* Primary */
@@ -609,7 +616,7 @@ img {
 .sky-summary-label {
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .sky-summary-value {
@@ -625,7 +632,7 @@ img {
 
   color: var(--primary);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -641,7 +648,7 @@ img {
 
   color: var(--primary);
 
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.18em;
 }
@@ -757,7 +764,7 @@ img {
 
   backdrop-filter: blur(10px);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* Card content */
@@ -810,7 +817,7 @@ img {
 .highlight-time {
   color: var(--secondary);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -860,7 +867,7 @@ img {
 .event-date {
   color: var(--primary);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .event-content h3 {
@@ -875,7 +882,7 @@ img {
 .event-name {
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 
   letter-spacing: 0.06em;
 }
@@ -1300,7 +1307,7 @@ img {
 
   backdrop-filter: blur(10px);
 
-  font-size: 9px;
+  font-size: 12px;
 }
 
 /* Card content */
@@ -1318,7 +1325,7 @@ img {
 .celestial-catalog {
   color: var(--primary);
 
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 0.08em;
 }
 
@@ -1348,7 +1355,7 @@ img {
 
   color: var(--secondary);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* Empty */
@@ -1600,7 +1607,7 @@ img {
 
   backdrop-filter: blur(10px);
 
-  font-size: 11px;
+  font-size: 12px;
 
   transition:
     color 0.2s ease,
@@ -1652,7 +1659,7 @@ img {
 
   color: var(--secondary);
 
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.2em;
 }
@@ -1702,13 +1709,13 @@ img {
 
   color: var(--primary);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .object-distance {
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .object-main-description {
@@ -1747,7 +1754,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 
   letter-spacing: 0.12em;
 }
@@ -1773,7 +1780,7 @@ img {
 .object-info-list dt {
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .object-info-list dd {
@@ -1783,7 +1790,7 @@ img {
 
   color: var(--text-primary);
 
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
 
   text-align: right;
@@ -1802,7 +1809,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .object-observation-grid {
@@ -1835,7 +1842,7 @@ img {
 .object-observation-card span {
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .object-observation-value {
@@ -1854,7 +1861,7 @@ img {
 
   color: #555d6c;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -1891,7 +1898,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .object-unobserved {
@@ -1908,7 +1915,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.7;
 }
 
@@ -2265,7 +2272,7 @@ img {
 .auth-field label {
   color: var(--text-muted);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .auth-field input {
@@ -2301,7 +2308,7 @@ img {
 .auth-help {
   color: #626a79;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -2313,7 +2320,7 @@ img {
 
   color: #e69aa2;
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .auth-success {
@@ -2328,7 +2335,7 @@ img {
 
   color: var(--secondary);
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -2353,7 +2360,7 @@ img {
 
   cursor: pointer;
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .auth-forgot-row button:hover {
@@ -2425,7 +2432,7 @@ img {
 
   color: var(--text-muted);
 
-  font-size: 10px;
+  font-size: 12px;
 }
 
 /* ========================================
@@ -2482,7 +2489,7 @@ img {
 
   text-align: center;
 
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .auth-switch a {
@@ -2550,7 +2557,7 @@ img {
   .auth-copy p {
     margin-top: 12px;
 
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .auth-content {
@@ -2574,9 +2581,7 @@ img {
 
 .observation-editor-page {
   min-height: calc(100vh - 72px);
-
   padding: 54px 0 110px;
-
   background: var(--background);
 }
 
@@ -2591,20 +2596,15 @@ img {
 
 .observation-editor-header h1 {
   margin: 10px 0 14px;
-
   font-family: var(--font-noto-serif-kr), serif;
-
   font-size: clamp(38px, 5vw, 56px);
   font-weight: 500;
-
   line-height: 1.2;
 }
 
 .observation-editor-header p {
   margin: 0;
-
   color: var(--text-muted);
-
   font-size: 13px;
   line-height: 1.8;
 }
@@ -2616,38 +2616,38 @@ img {
 .observation-form {
   display: flex;
   flex-direction: column;
-
-  gap: 24px;
+  gap: 26px;
 }
 
 .observation-field {
   display: flex;
   flex-direction: column;
-
-  gap: 9px;
+  gap: 10px;
 }
 
-.observation-field label {
+.observation-field > label,
+.observation-image-label-row label {
   color: var(--text-muted);
-
   font-size: 12px;
   font-weight: 500;
+  line-height: 1.4;
+}
+
+.observation-required {
+  margin-left: 4px;
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .observation-field input,
 .observation-field select,
 .observation-field textarea {
   width: 100%;
-
   border: 1px solid var(--border);
   border-radius: 10px;
-
   outline: none;
-
   background: var(--surface-elevated);
-
   color: var(--text-primary);
-
   transition:
     border-color 0.2s ease,
     background 0.2s ease,
@@ -2657,17 +2657,13 @@ img {
 .observation-field input,
 .observation-field select {
   height: 50px;
-
   padding: 0 15px;
 }
 
 .observation-field textarea {
   min-height: 180px;
-
   padding: 15px;
-
   resize: vertical;
-
   line-height: 1.7;
 }
 
@@ -2676,35 +2672,85 @@ img {
   color: #616979;
 }
 
+.observation-field input:hover,
+.observation-field textarea:hover {
+  border-color: rgba(167, 139, 250, 0.24);
+}
+
 .observation-field input:focus,
 .observation-field select:focus,
 .observation-field textarea:focus {
-  border-color: rgba(167, 139, 250, 0.6);
+  border-color: rgba(167, 139, 250, 0.62);
 
-  background: var(--surface);
+  background-color: var(--surface);
 
   box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
 }
 
-/* select 화살표 */
+.observation-field-help {
+  margin-top: -2px;
+  color: #646c7d;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ========================================
+   OBSERVATION SELECT
+======================================== */
 
 .observation-field select {
+  padding: 0 46px 0 15px;
   appearance: none;
-
+  -webkit-appearance: none;
   cursor: pointer;
 
+  background-color: var(--surface-elevated);
   background-image:
     linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
     linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
-
   background-position:
-    calc(100% - 18px) 21px,
-    calc(100% - 13px) 21px;
-
-  background-size: 5px 5px;
+    calc(100% - 20px) 21px,
+    calc(100% - 15px) 21px;
+  background-size:
+    5px 5px,
+    5px 5px;
   background-repeat: no-repeat;
+}
 
-  padding-right: 42px;
+.observation-field select:hover {
+  border-color: rgba(167, 139, 250, 0.35);
+}
+
+.observation-field select option {
+  background: #171c2a;
+  color: #f5f3ee;
+}
+
+/* ========================================
+   DATETIME / NUMBER INPUT
+======================================== */
+
+.observation-field input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+.observation-field input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+  opacity: 0.7;
+  cursor: pointer;
+  filter: invert(0.9);
+}
+
+/* 관측 시간의 브라우저 기본 위/아래 화살표 제거 */
+.observation-field input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.observation-field input[type="number"]::-webkit-inner-spin-button,
+.observation-field input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 /* ========================================
@@ -2714,24 +2760,18 @@ img {
 .observation-rating {
   display: flex;
   align-items: center;
-
-  gap: 6px;
+  gap: 7px;
+  min-height: 32px;
 }
 
 .observation-star {
   padding: 0;
-
   border: 0;
-
   background: transparent;
-
   color: rgba(255, 255, 255, 0.16);
-
   cursor: pointer;
-
   font-size: 28px;
   line-height: 1;
-
   transition:
     color 0.2s ease,
     transform 0.2s ease;
@@ -2752,18 +2792,167 @@ img {
 .observation-duration-input {
   display: flex;
   align-items: center;
-
-  gap: 10px;
+  gap: 12px;
 }
 
 .observation-duration-input input {
   width: 180px;
+  flex: 0 0 180px;
 }
 
 .observation-duration-input span {
   color: var(--text-muted);
-
   font-size: 12px;
+}
+
+/* ========================================
+   OBSERVATION IMAGE UPLOAD
+======================================== */
+
+.observation-image-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-height: 18px;
+}
+
+.observation-image-label-row > span {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border: 1px solid rgba(167, 139, 250, 0.15);
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.05);
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.observation-image-input {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.observation-image-upload {
+  min-height: 148px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 26px;
+  border: 1px dashed rgba(167, 139, 250, 0.32);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(167, 139, 250, 0.045), rgba(167, 139, 250, 0.015));
+  cursor: pointer;
+  text-align: center;
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+
+.observation-image-upload:hover {
+  transform: translateY(-1px);
+  border-color: rgba(167, 139, 250, 0.62);
+  background: rgba(167, 139, 250, 0.065);
+}
+
+.observation-image-upload.disabled {
+  opacity: 0.45;
+  cursor: default;
+  pointer-events: none;
+}
+
+.observation-image-upload-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+  border: 1px solid rgba(167, 139, 250, 0.24);
+  border-radius: 50%;
+  background: rgba(167, 139, 250, 0.06);
+  color: var(--primary);
+  font-size: 22px;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.observation-image-upload strong {
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.observation-image-upload p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ========================================
+   IMAGE PREVIEW
+======================================== */
+
+.observation-image-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.observation-image-preview {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: #05070d;
+}
+
+.observation-image-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.observation-image-preview button {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  background: rgba(8, 11, 20, 0.82);
+  color: var(--text-primary);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.observation-image-preview button:hover {
+  background: rgba(230, 154, 162, 0.9);
+  color: #080b14;
 }
 
 /* ========================================
@@ -2773,10 +2962,8 @@ img {
 .observation-form-actions {
   display: flex;
   justify-content: flex-end;
-
   gap: 12px;
-
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .observation-form-actions .button {
@@ -2789,9 +2976,7 @@ img {
 
 .observations-page {
   min-height: calc(100vh - 72px);
-
   padding: 90px 0 120px;
-
   background: var(--background);
 }
 
@@ -2799,24 +2984,19 @@ img {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-
   gap: 30px;
 }
 
 .observations-header h1 {
   margin: 8px 0 12px;
-
   font-size: clamp(50px, 7vw, 78px);
   font-weight: 600;
-
   line-height: 1;
 }
 
 .observations-header p {
   margin: 0;
-
   color: var(--text-muted);
-
   font-size: 13px;
 }
 
@@ -2827,7 +3007,6 @@ img {
 .observation-list {
   display: flex;
   flex-direction: column;
-
   gap: 12px;
 }
 
@@ -2835,18 +3014,12 @@ img {
   display: grid;
   grid-template-columns: 130px minmax(0, 1fr) auto 24px;
   align-items: center;
-
   gap: 24px;
-
   min-height: 120px;
-
   padding: 22px 24px;
-
   border: 1px solid var(--border);
   border-radius: 14px;
-
   background: var(--surface);
-
   transition:
     transform 0.2s ease,
     border-color 0.2s ease,
@@ -2855,29 +3028,24 @@ img {
 
 .observation-list-card:hover {
   transform: translateY(-2px);
-
   border-color: rgba(167, 139, 250, 0.3);
-
   background: var(--surface-elevated);
 }
 
 .observation-list-date {
   display: flex;
   flex-direction: column;
-
   gap: 5px;
-
   color: var(--text-muted);
 }
 
 .observation-list-date strong {
   color: var(--text-primary);
-
   font-size: 12px;
 }
 
 .observation-list-date span {
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .observation-list-main {
@@ -2886,42 +3054,33 @@ img {
 
 .observation-list-main h2 {
   margin: 6px 0 3px;
-
   font-family: var(--font-playfair), Georgia, serif;
-
   font-size: 24px;
   font-weight: 600;
 }
 
 .observation-list-main p {
   margin: 0;
-
   color: var(--text-muted);
-
-  font-size: 11px;
+  font-size: 12px;
 }
 
 .observation-list-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-
   gap: 8px;
-
   color: var(--text-muted);
-
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .observation-list-rating {
   color: var(--primary);
-
   letter-spacing: 0.05em;
 }
 
 .observation-list-arrow {
   color: var(--primary);
-
   font-size: 18px;
 }
 
@@ -2931,33 +3090,27 @@ img {
 
 .observations-empty {
   min-height: 420px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
   text-align: center;
 }
 
 .observations-empty > span {
   color: var(--primary);
-
   font-size: 34px;
 }
 
 .observations-empty h2 {
   margin: 18px 0 10px;
-
   font-size: 26px;
   font-weight: 500;
 }
 
 .observations-empty p {
   margin: 0 0 26px;
-
   color: var(--text-muted);
-
   font-size: 12px;
 }
 
@@ -2967,36 +3120,27 @@ img {
 
 .observation-detail-page {
   min-height: calc(100vh - 72px);
-
   padding: 54px 0 120px;
-
   background: var(--background);
 }
 
 .observation-detail-header {
   position: relative;
-
   margin-top: 44px;
-
   padding-bottom: 34px;
-
   border-bottom: 1px solid var(--border);
 }
 
 .observation-detail-header h1 {
   margin: 10px 0 4px;
-
   font-size: clamp(54px, 7vw, 88px);
   font-weight: 600;
-
   line-height: 0.95;
 }
 
 .observation-detail-header > p {
   margin: 0;
-
   color: var(--text-muted);
-
   font-size: 14px;
 }
 
@@ -3004,26 +3148,18 @@ img {
   position: absolute;
   right: 0;
   bottom: 34px;
-
   display: flex;
-
   gap: 10px;
 }
 
 .observation-delete-button {
   min-height: 48px;
-
   padding: 0 20px;
-
   border: 1px solid rgba(230, 154, 162, 0.25);
   border-radius: 10px;
-
   background: transparent;
-
   color: #e69aa2;
-
   cursor: pointer;
-
   transition:
     background 0.2s ease,
     border-color 0.2s ease,
@@ -3032,24 +3168,86 @@ img {
 
 .observation-delete-button:hover:not(:disabled) {
   transform: translateY(-1px);
-
   border-color: rgba(230, 154, 162, 0.5);
-
   background: rgba(230, 154, 162, 0.06);
 }
 
 .observation-delete-button:disabled {
   opacity: 0.5;
-
   cursor: default;
+}
+
+/* ========================================
+   OBSERVATION GALLERY
+======================================== */
+
+.observation-gallery-section {
+  margin-top: 44px;
+}
+
+.observation-gallery-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 15px;
+}
+
+.observation-gallery-heading .section-label {
+  margin-bottom: 0;
+}
+
+.observation-gallery-heading > span:last-child {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.observation-gallery {
+  display: grid;
+  gap: 12px;
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.observation-gallery-1 {
+  grid-template-columns: 1fr;
+}
+
+.observation-gallery-2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.observation-gallery-3 {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: repeat(2, 210px);
+}
+
+.observation-gallery-item {
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #05070d;
+}
+
+.observation-gallery-3 .observation-gallery-item:first-child {
+  grid-row: 1 / 3;
+}
+
+.observation-gallery-3 .observation-gallery-item {
+  min-height: 0;
+}
+
+.observation-gallery-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .observation-detail-grid {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-
   gap: 20px;
-
   margin-top: 34px;
 }
 
@@ -3057,7 +3255,6 @@ img {
 .observation-note-card {
   border: 1px solid var(--border);
   border-radius: 16px;
-
   background: var(--surface);
 }
 
@@ -3069,11 +3266,8 @@ img {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   min-height: 58px;
-
   gap: 20px;
-
   border-bottom: 1px solid var(--border);
 }
 
@@ -3083,33 +3277,26 @@ img {
 
 .observation-info-item span {
   color: var(--text-muted);
-
-  font-size: 10px;
+  font-size: 12px;
 }
 
 .observation-info-item strong {
   color: var(--text-primary);
-
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 500;
-
   text-align: right;
 }
 
 .observation-note-card {
   min-height: 320px;
-
   padding: 30px;
 }
 
 .observation-note-card p {
   margin: 24px 0 0;
-
   color: var(--text-muted);
-
   font-size: 14px;
   line-height: 2;
-
   white-space: pre-wrap;
 }
 
@@ -3131,6 +3318,10 @@ img {
     font-size: 38px;
   }
 
+  .observation-form {
+    gap: 23px;
+  }
+
   .observation-form-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -3138,6 +3329,20 @@ img {
 
   .observation-form-actions .button {
     min-width: 0;
+  }
+
+  .observation-duration-input input {
+    width: min(180px, calc(100% - 40px));
+    flex-basis: min(180px, calc(100% - 40px));
+  }
+
+  .observation-image-upload {
+    min-height: 138px;
+    padding: 22px 16px;
+  }
+
+  .observation-image-preview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .observations-page {
@@ -3155,9 +3360,7 @@ img {
 
   .observation-list-card {
     grid-template-columns: 1fr;
-
     gap: 14px;
-
     padding: 20px;
   }
 
@@ -3175,19 +3378,27 @@ img {
 
   .observation-detail-actions {
     position: static;
-
     margin-top: 28px;
+  }
+
+  .observation-gallery,
+  .observation-gallery-1,
+  .observation-gallery-2,
+  .observation-gallery-3 {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+
+  .observation-gallery-3 .observation-gallery-item:first-child {
+    grid-row: auto;
+  }
+
+  .observation-gallery-item,
+  .observation-gallery-3 .observation-gallery-item {
+    min-height: 240px;
   }
 
   .observation-detail-grid {
     grid-template-columns: 1fr;
-  }
-
-  .observation-duration-input input {
-    width: 100%;
-  }
-
-  .observation-duration-input {
-    align-items: stretch;
   }
 }
