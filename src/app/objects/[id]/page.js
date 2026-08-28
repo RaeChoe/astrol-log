@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
+import FavoriteButton from "@/components/celestial/FavoriteButton";
 import { createClient } from "@/lib/supabase/server";
 
 const TYPE_LABELS = {
@@ -25,9 +27,7 @@ const FALLBACK_IMAGES = {
 
 /*
  * 현재는 천문 API 연결 전이므로
- * 오늘의 관측 정보 일부는 임시 UI 데이터.
- *
- * 이후 외부 천문 API 연결 시 교체.
+ * 고도 / 방위 / 관측 조건은 임시 UI 데이터.
  */
 const OBSERVATION_MOCK = {
   altitude: "48°",
@@ -44,9 +44,9 @@ export async function generateMetadata({ params }) {
     .from("celestial_objects")
     .select(
       `
-        name_en,
-        name_ko
-      `,
+      name_en,
+      name_ko
+    `,
     )
     .eq("id", id)
     .maybeSingle();
@@ -59,6 +59,7 @@ export async function generateMetadata({ params }) {
 
   return {
     title: `${object.name_en || object.name_ko} | AstroLog`,
+
     description: object.name_ko
       ? `${object.name_ko} 천체 정보와 관측 기록을 확인해보세요.`
       : `${object.name_en} 천체 정보와 관측 기록을 확인해보세요.`,
@@ -72,7 +73,7 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 현재 천체 조회
+   * 천체 정보
    * =========================
    */
 
@@ -80,18 +81,18 @@ export default async function ObjectDetailPage({ params }) {
     .from("celestial_objects")
     .select(
       `
-        id,
-        catalog_name,
-        name_en,
-        name_ko,
-        type,
-        collection_group,
-        description,
-        distance,
-        magnitude,
-        image_url,
-        external_id
-      `,
+      id,
+      catalog_name,
+      name_en,
+      name_ko,
+      type,
+      collection_group,
+      description,
+      distance,
+      magnitude,
+      image_url,
+      external_id
+    `,
     )
     .eq("id", id)
     .maybeSingle();
@@ -106,11 +107,11 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 로그인 사용자 확인
+   * 로그인 사용자
    * =========================
    *
-   * Object Detail 자체는
-   * 로그인하지 않아도 볼 수 있다.
+   * 천체 상세 페이지 자체는
+   * 비로그인 상태에서도 볼 수 있다.
    */
 
   const {
@@ -118,68 +119,93 @@ export default async function ObjectDetailPage({ params }) {
   } = await supabase.auth.getUser();
 
   let observationCount = 0;
+
   let latestObservation = null;
+
   let latestObservationImage = null;
+
+  let isFavorite = false;
 
   /*
    * =========================
-   * 나의 관측 기록 조회
+   * 사용자 데이터
    * =========================
-   *
-   * 로그인한 사용자만 자신의 기록 조회.
-   *
-   * 같은 천체를 여러 번 관측한 경우:
-   * - 총 관측 횟수
-   * - 가장 최근 관측 기록
-   * 을 표시한다.
    */
 
   if (user) {
-    const {
-      data: observations,
-      error: observationError,
-      count,
-    } = await supabase
-      .from("observations")
-      .select(
-        `
-          id,
-          observed_at,
-          location_name,
-          equipment,
-          equipment_detail,
-          rating,
-          duration_minutes,
-          note,
-          observation_images (
-            id,
-            image_url,
-            sort_order
-          )
-        `,
-        {
-          count: "exact",
-        },
-      )
-      .eq("user_id", user.id)
-      .eq("celestial_object_id", object.id)
-      .order("observed_at", {
-        ascending: false,
-      });
+    /*
+     * 관심 천체 여부와 관측 기록을
+     * 서로 독립적으로 동시에 조회한다.
+     */
+    const [favoriteResult, observationsResult] = await Promise.all([
+      supabase
+        .from("favorites")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("celestial_object_id", object.id)
+        .maybeSingle(),
 
-    if (observationError) {
-      console.error("천체별 관측 기록 조회 오류:", observationError);
+      supabase
+        .from("observations")
+        .select(
+          `
+              id,
+              observed_at,
+              location_name,
+              equipment,
+              equipment_detail,
+              rating,
+              duration_minutes,
+              note,
+
+              observation_images (
+                id,
+                image_url,
+                sort_order
+              )
+            `,
+          {
+            count: "exact",
+          },
+        )
+        .eq("user_id", user.id)
+        .eq("celestial_object_id", object.id)
+        .order("observed_at", {
+          ascending: false,
+        }),
+    ]);
+
+    /*
+     * =========================
+     * FAVORITE
+     * =========================
+     */
+
+    if (favoriteResult.error) {
+      console.error("관심 천체 조회 오류:", favoriteResult.error);
     } else {
-      observationCount = count || observations?.length || 0;
-
-      latestObservation = observations?.[0] || null;
+      isFavorite = Boolean(favoriteResult.data);
     }
 
     /*
-     * 최근 관측 기록에 사진이 있다면
-     * 첫 번째 사진을 미리보기로 사용.
+     * =========================
+     * OBSERVATIONS
+     * =========================
+     */
+
+    if (observationsResult.error) {
+      console.error("천체별 관측 기록 조회 오류:", observationsResult.error);
+    } else {
+      observationCount = observationsResult.count || observationsResult.data?.length || 0;
+
+      latestObservation = observationsResult.data?.[0] || null;
+    }
+
+    /*
+     * 최근 관측 기록의 첫 번째 사진을
+     * 미리보기로 사용.
      *
-     * observation-images bucket은 private이므로
+     * Storage bucket이 private이므로
      * signed URL 생성.
      */
 
@@ -191,7 +217,11 @@ export default async function ObjectDetailPage({ params }) {
       const representative = sortedImages[0];
 
       if (representative?.image_url) {
-        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+        const {
+          data: signedUrlData,
+
+          error: signedUrlError,
+        } = await supabase.storage
           .from("observation-images")
           .createSignedUrl(representative.image_url, 60 * 60);
 
@@ -203,6 +233,12 @@ export default async function ObjectDetailPage({ params }) {
       }
     }
   }
+
+  /*
+   * =========================
+   * 화면 표시 값
+   * =========================
+   */
 
   const image = getObjectImage(object);
 
@@ -233,14 +269,14 @@ export default async function ObjectDetailPage({ params }) {
       </section>
 
       {/* =========================
-          MAIN
+          MAIN CONTENT
       ========================= */}
 
       <section className="object-main-section">
         <div className="container">
           <div className="object-main-grid">
             {/* =========================
-                OBJECT INFO
+                OBJECT INTRO
             ========================= */}
 
             <div className="object-main-content">
@@ -264,7 +300,7 @@ export default async function ObjectDetailPage({ params }) {
             </div>
 
             {/* =========================
-                BASIC INFORMATION
+                BASIC INFO
             ========================= */}
 
             <aside className="object-info-panel">
@@ -305,7 +341,7 @@ export default async function ObjectDetailPage({ params }) {
           </div>
 
           {/* =========================
-              TODAY'S OBSERVATION
+              TODAY OBSERVATION
           ========================= */}
 
           <section className="object-observation-area">
@@ -373,13 +409,11 @@ export default async function ObjectDetailPage({ params }) {
               관측 기록하기
             </Link>
 
-            {/*
-              favorites 실제 기능은
-              다음 단계에서 연결.
-            */}
-            <button type="button" className="object-favorite-button">
-              ☆ 관심 천체 추가
-            </button>
+            <FavoriteButton
+              userId={user?.id || null}
+              objectId={object.id}
+              initialFavorite={isFavorite}
+            />
           </div>
         </div>
       </section>
@@ -423,7 +457,8 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   }
 
   /*
-   * 로그인 + 아직 관측 기록 없음
+   * 로그인했지만
+   * 아직 관측하지 않은 천체
    */
   if (!latestObservation) {
     return (
@@ -444,7 +479,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   }
 
   /*
-   * 로그인 + 관측 기록 있음
+   * 실제 관측 기록 존재
    */
   return (
     <section className="object-personal-card object-personal-card-observed">
@@ -463,6 +498,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
           {latestObservation.location_name && (
             <>
               <i />
+
               <span>{latestObservation.location_name}</span>
             </>
           )}
@@ -520,8 +556,10 @@ function formatObservationDate(value) {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
+
     hour: "2-digit",
     minute: "2-digit",
+
     hour12: false,
   }).format(new Date(value));
 }
