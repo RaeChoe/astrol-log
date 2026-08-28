@@ -57,7 +57,7 @@ export default function ObservationsClient({ observations = [] }) {
   }, [filter, observations]);
 
   /*
-   * 월별 기록 그룹 생성
+   * 월별로 관측 기록 묶기
    *
    * AUGUST 2026
    * JULY 2026
@@ -88,7 +88,9 @@ export default function ObservationsClient({ observations = [] }) {
           </Link>
         </div>
 
-        {/* Filters */}
+        {/* =========================
+            FILTERS
+        ========================= */}
 
         <div className="observations-filter-list">
           {FILTERS.map(item => (
@@ -156,15 +158,22 @@ function ObservationRow({ observation }) {
     .format(date)
     .toUpperCase();
 
+  /*
+   * 목록에서는 상세 장비명을 보여주지 않는다.
+   *
+   * telescope
+   * → 망원경
+   *
+   * binoculars
+   * → 쌍안경
+   */
   const equipmentLabel = EQUIPMENT_LABELS[observation.equipment] || observation.equipment || "-";
-
-  const equipmentText = observation.equipment_detail
-    ? `${equipmentLabel} · ${observation.equipment_detail}`
-    : equipmentLabel;
 
   return (
     <Link href={`/observations/${observation.id}`} className="observation-record-card">
-      {/* Date */}
+      {/* =========================
+          DATE
+      ========================= */}
 
       <div className="observation-record-date">
         <strong>{day}</strong>
@@ -172,15 +181,17 @@ function ObservationRow({ observation }) {
         <span>{monthShort}</span>
       </div>
 
-      {/* Image */}
+      {/* =========================
+          THUMBNAIL
+      ========================= */}
 
       <div className="observation-record-thumbnail">
         <img src={observation.thumbnail} alt={object?.name_ko || object?.name_en || "관측 천체"} />
-
-        {observation.hasObservationPhoto && <span className="observation-record-photo-dot">●</span>}
       </div>
 
-      {/* Main */}
+      {/* =========================
+          CONTENT
+      ========================= */}
 
       <div className="observation-record-main">
         <div className="observation-record-title">
@@ -192,7 +203,7 @@ function ObservationRow({ observation }) {
         <div className="observation-record-meta">
           {observation.location_name && <span className="accent">{observation.location_name}</span>}
 
-          <span>{equipmentText}</span>
+          <span>{equipmentLabel}</span>
 
           <span className="observation-record-stars">
             {"★".repeat(observation.rating || 0)}
@@ -206,6 +217,10 @@ function ObservationRow({ observation }) {
         {observation.note && <p>“{truncate(observation.note, 90)}”</p>}
       </div>
 
+      {/* =========================
+          ARROW
+      ========================= */}
+
       <span className="observation-record-arrow">→</span>
     </Link>
   );
@@ -216,11 +231,6 @@ function getPrimaryObjectName(object) {
     return "Unknown Object";
   }
 
-  /*
-   * M31처럼 catalog_name과
-   * name_en이 다른 경우에는
-   * 카탈로그명을 먼저 보여준다.
-   */
   return object.catalog_name || object.name_en || object.name_ko || "Unknown Object";
 }
 
@@ -232,7 +242,11 @@ function getSecondaryObjectName(object) {
   const pieces = [];
 
   /*
-   * M31 + Andromeda Galaxy
+   * M31
+   * Andromeda Galaxy
+   *
+   * 처럼 카탈로그명과 영문명이
+   * 다른 경우에만 name_en 추가
    */
   if (object.name_en && object.name_en.toLowerCase() !== object.catalog_name?.toLowerCase()) {
     pieces.push(object.name_en);
@@ -251,7 +265,6 @@ function groupByMonth(observations) {
 
     const key = new Intl.DateTimeFormat("en-US", {
       month: "long",
-
       year: "numeric",
     })
       .format(date)

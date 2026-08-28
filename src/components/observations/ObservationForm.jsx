@@ -50,9 +50,13 @@ export default function ObservationForm({
 
   const initialObservedValue = initialData?.observed_at || new Date().toISOString();
 
+  const initialTimeParts = toLocalTime(initialObservedValue).split(":");
+
   const [observedDate, setObservedDate] = useState(toLocalDate(initialObservedValue));
 
-  const [observedTime, setObservedTime] = useState(toLocalTime(initialObservedValue));
+  const [observedHour, setObservedHour] = useState(initialTimeParts[0] || "00");
+
+  const [observedMinute, setObservedMinute] = useState(initialTimeParts[1] || "00");
 
   const [locationName, setLocationName] = useState(initialData?.location_name || "");
 
@@ -74,23 +78,13 @@ export default function ObservationForm({
 
   const [errorMessage, setErrorMessage] = useState("");
 
-  /*
-   * 현재 선택된 천체
-   *
-   * select 값을 기준으로 실제 celestial object를 찾아
-   * 관측 대상 카드에 바로 반영한다.
-   */
   const selectedObject = useMemo(() => {
     return objects.find(object => String(object.id) === String(celestialObjectId)) || null;
   }, [objects, celestialObjectId]);
 
-  /*
-   * 새로 추가한 사진의 브라우저 미리보기
-   */
   const newImagePreviews = useMemo(() => {
     return newImages.map(file => ({
       file,
-
       url: URL.createObjectURL(file),
     }));
   }, [newImages]);
@@ -102,13 +96,65 @@ export default function ObservationForm({
 
     setEquipment(nextEquipment);
 
-    /*
-     * 맨눈은 상세 장비가 존재하지 않으므로
-     * 기존 값 초기화
-     */
     if (nextEquipment === "naked_eye") {
       setEquipmentDetail("");
     }
+  };
+
+  const handleHourChange = event => {
+    const value = event.target.value;
+
+    if (value === "") {
+      setObservedHour("");
+
+      return;
+    }
+
+    if (!/^\d{1,2}$/.test(value)) {
+      return;
+    }
+
+    const number = Number(value);
+
+    if (number >= 0 && number <= 23) {
+      setObservedHour(value);
+    }
+  };
+
+  const handleMinuteChange = event => {
+    const value = event.target.value;
+
+    if (value === "") {
+      setObservedMinute("");
+
+      return;
+    }
+
+    if (!/^\d{1,2}$/.test(value)) {
+      return;
+    }
+
+    const number = Number(value);
+
+    if (number >= 0 && number <= 59) {
+      setObservedMinute(value);
+    }
+  };
+
+  const normalizeHour = () => {
+    if (observedHour === "") {
+      return;
+    }
+
+    setObservedHour(String(Number(observedHour)).padStart(2, "0"));
+  };
+
+  const normalizeMinute = () => {
+    if (observedMinute === "") {
+      return;
+    }
+
+    setObservedMinute(String(Number(observedMinute)).padStart(2, "0"));
   };
 
   const handleImageChange = event => {
@@ -184,7 +230,7 @@ export default function ObservationForm({
       return;
     }
 
-    if (!observedDate || !observedTime) {
+    if (!observedDate || observedHour === "" || observedMinute === "") {
       setErrorMessage("관측 날짜와 시간을 입력해주세요.");
 
       return;
@@ -206,10 +252,14 @@ export default function ObservationForm({
 
     const supabase = createClient();
 
+    const normalizedHour = String(Number(observedHour)).padStart(2, "0");
+
+    const normalizedMinute = String(Number(observedMinute)).padStart(2, "0");
+
     const payload = {
       celestial_object_id: Number(celestialObjectId),
 
-      observed_at: new Date(`${observedDate}T${observedTime}`).toISOString(),
+      observed_at: new Date(`${observedDate}T${normalizedHour}:${normalizedMinute}`).toISOString(),
 
       location_name: locationName.trim(),
 
@@ -223,12 +273,6 @@ export default function ObservationForm({
 
       note: note.trim() || null,
     };
-
-    /*
-     * ============================
-     * UPDATE
-     * ============================
-     */
 
     if (isEdit) {
       const { error } = await supabase
@@ -247,17 +291,12 @@ export default function ObservationForm({
         return;
       }
 
-      /*
-       * 기존 이미지 중
-       * 사용자가 제거한 이미지
-       */
       const deletedImages = initialImages.filter(
         initialImage => !existingImages.some(currentImage => currentImage.id === initialImage.id),
       );
 
       const deleteResult = await deleteObservationImages({
         supabase,
-
         images: deletedImages,
       });
 
@@ -269,18 +308,11 @@ export default function ObservationForm({
         return;
       }
 
-      /*
-       * 새 이미지 추가
-       */
       const uploadResult = await uploadObservationImages({
         supabase,
-
         userId,
-
         observationId: initialData.id,
-
         files: newImages,
-
         startOrder: existingImages.length,
       });
 
@@ -299,17 +331,10 @@ export default function ObservationForm({
       return;
     }
 
-    /*
-     * ============================
-     * CREATE
-     * ============================
-     */
-
     const { data, error } = await supabase
       .from("observations")
       .insert({
         ...payload,
-
         user_id: userId,
       })
       .select("id")
@@ -325,19 +350,11 @@ export default function ObservationForm({
       return;
     }
 
-    /*
-     * observation을 먼저 생성해서
-     * id를 확보한 뒤 이미지 저장
-     */
     const uploadResult = await uploadObservationImages({
       supabase,
-
       userId,
-
       observationId: data.id,
-
       files: newImages,
-
       startOrder: 0,
     });
 
@@ -358,10 +375,6 @@ export default function ObservationForm({
     <form className="observation-form" onSubmit={handleSubmit}>
       {errorMessage && <p className="auth-error">{errorMessage}</p>}
 
-      {/* =========================
-          관측 대상
-      ========================= */}
-
       {selectedObject && (
         <section className="observation-target-card">
           <div className="observation-target-image">
@@ -381,10 +394,6 @@ export default function ObservationForm({
         </section>
       )}
 
-      {/* =========================
-          천체 선택
-      ========================= */}
-
       <div className="observation-field">
         <label htmlFor="observation-object">
           관측 천체
@@ -402,16 +411,11 @@ export default function ObservationForm({
           {objects.map(object => (
             <option key={object.id} value={object.id}>
               {getObjectTitle(object)}
-
               {object.name_ko ? ` · ${object.name_ko}` : ""}
             </option>
           ))}
         </select>
       </div>
-
-      {/* =========================
-          관측 일시
-      ========================= */}
 
       <div className="observation-field">
         <label>
@@ -435,20 +439,40 @@ export default function ObservationForm({
           <div className="observation-datetime-item">
             <span className="observation-sub-label">시간</span>
 
-            <input
-              id="observation-time"
-              type="time"
-              value={observedTime}
-              onChange={event => setObservedTime(event.target.value)}
-              required
-            />
+            <div className="observation-time-fields">
+              <input
+                type="text"
+                inputMode="numeric"
+                value={observedHour}
+                onChange={handleHourChange}
+                onBlur={normalizeHour}
+                placeholder="00"
+                maxLength={2}
+                aria-label="관측 시"
+                required
+              />
+
+              <span>:</span>
+
+              <input
+                type="text"
+                inputMode="numeric"
+                value={observedMinute}
+                onChange={handleMinuteChange}
+                onBlur={normalizeMinute}
+                placeholder="00"
+                maxLength={2}
+                aria-label="관측 분"
+                required
+              />
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* =========================
-          장소
-      ========================= */}
+        <span className="observation-field-help">
+          시간은 24시간 기준으로 입력해주세요. 예: 오후 10시 30분 → 22:30
+        </span>
+      </div>
 
       <div className="observation-field">
         <label htmlFor="observation-location">
@@ -466,10 +490,6 @@ export default function ObservationForm({
           required
         />
       </div>
-
-      {/* =========================
-          관측 장비
-      ========================= */}
 
       <div className="observation-field">
         <label htmlFor="observation-equipment">
@@ -512,10 +532,6 @@ export default function ObservationForm({
         </div>
       )}
 
-      {/* =========================
-          만족도
-      ========================= */}
-
       <div className="observation-field">
         <label>
           관측 만족도
@@ -537,10 +553,6 @@ export default function ObservationForm({
         </div>
       </div>
 
-      {/* =========================
-          관측 시간
-      ========================= */}
-
       <div className="observation-field">
         <label htmlFor="observation-duration">관측 시간</label>
 
@@ -558,10 +570,6 @@ export default function ObservationForm({
           <span>분</span>
         </div>
       </div>
-
-      {/* =========================
-          사진
-      ========================= */}
 
       <div className="observation-field">
         <div className="observation-image-label-row">
@@ -618,10 +626,6 @@ export default function ObservationForm({
         )}
       </div>
 
-      {/* =========================
-          메모
-      ========================= */}
-
       <div className="observation-field">
         <label htmlFor="observation-note">관측 기록</label>
 
@@ -633,10 +637,6 @@ export default function ObservationForm({
           rows={8}
         />
       </div>
-
-      {/* =========================
-          Actions
-      ========================= */}
 
       <div className="observation-form-actions">
         <button
@@ -685,10 +685,6 @@ function getObjectTitle(object) {
     return "";
   }
 
-  /*
-   * catalog_name과 name_en이 같은 경우
-   * Jupiter · Jupiter처럼 중복되지 않게 한다.
-   */
   if (
     object.catalog_name &&
     object.name_en &&
@@ -739,7 +735,6 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
         .from("observation-images")
         .upload(storagePath, file, {
           cacheControl: "3600",
-
           upsert: false,
         });
 
@@ -749,7 +744,6 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
 
       uploaded.push({
         path: storagePath,
-
         sort_order: startOrder + index,
       });
     }
@@ -780,7 +774,6 @@ async function uploadObservationImages({ supabase, userId, observationId, files,
 
     return {
       success: false,
-
       message: "관측 사진을 저장하지 못했습니다.",
     };
   }
