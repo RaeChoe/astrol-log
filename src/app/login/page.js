@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import LoginForm from "@/components/auth/LoginForm";
+import GoogleAuthButton from "@/components/auth/GoogleAuthButton";
 
 export const metadata = {
   title: "로그인 | AstroLog",
@@ -54,10 +55,7 @@ export default function LoginPage() {
               <span />
             </div>
 
-            <button type="button" className="google-auth-button">
-              <img src="/images/auth/google.png" alt="" className="google-auth-icon" />
-              Google로 계속하기
-            </button>
+            <GoogleAuthButton />
 
             <p className="auth-switch">
               아직 계정이 없나요? <Link href="/signup">회원가입</Link>
