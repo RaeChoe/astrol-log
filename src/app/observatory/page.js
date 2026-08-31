@@ -22,6 +22,21 @@ const FALLBACK_IMAGES = {
   m31: "/images/home/m31.png",
 };
 
+const MONTH_LABELS = [
+  "JAN",
+  "FEB",
+  "MAR",
+  "APR",
+  "MAY",
+  "JUN",
+  "JUL",
+  "AUG",
+  "SEP",
+  "OCT",
+  "NOV",
+  "DEC",
+];
+
 export default async function ObservatoryPage() {
   const user = await requireUser("/observatory");
 
@@ -191,10 +206,47 @@ export default async function ObservatoryPage() {
 
   /*
    * =========================
-   * RECENT OBSERVATIONS
+   * MONTHLY STATISTICS
    * =========================
    *
-   * 최근 3개 기록만 My Observatory에 표시.
+   * 현재 연도의 1월부터 현재 월까지
+   * 월별 관측 횟수를 계산한다.
+   *
+   * 별도의 통계 테이블 없이
+   * observations의 observed_at을 이용한다.
+   */
+
+  const now = new Date();
+
+  const currentYear = Number(
+    new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      timeZone: "Asia/Seoul",
+    }).format(now),
+  );
+
+  const currentMonth =
+    Number(
+      new Intl.DateTimeFormat("en-US", {
+        month: "numeric",
+        timeZone: "Asia/Seoul",
+      }).format(now),
+    ) - 1;
+
+  const monthlyObservations = createMonthlyStatistics({
+    observations,
+    year: currentYear,
+    lastMonth: currentMonth,
+  });
+
+  const maxMonthlyCount = Math.max(...monthlyObservations.map(month => month.count), 4);
+
+  const busiestMonth = [...monthlyObservations].sort((a, b) => b.count - a.count)[0];
+
+  /*
+   * =========================
+   * RECENT OBSERVATIONS
+   * =========================
    */
 
   const recentObservations = await Promise.all(
@@ -317,6 +369,87 @@ export default async function ObservatoryPage() {
 
             <Link href="/collection">도감 보기 →</Link>
           </div>
+        </div>
+      </section>
+
+      {/* =========================
+          MONTHLY OBSERVATIONS
+      ========================= */}
+
+      <section className="container observatory-chart-section">
+        <div className="observatory-section-header">
+          <div>
+            <span className="section-label">OBSERVATION ACTIVITY</span>
+
+            <h2 className="heading-ko">월별 관측 기록</h2>
+          </div>
+
+          <span className="observatory-chart-year">{currentYear}</span>
+        </div>
+
+        <div className="observatory-chart-card">
+          <div className="observatory-chart-top">
+            <div>
+              <span>{currentYear} OBSERVATIONS</span>
+
+              <strong>
+                {totalObservations}
+                <small>회</small>
+              </strong>
+            </div>
+
+            {busiestMonth?.count > 0 && (
+              <p>
+                가장 많이 관측한 달
+                <strong>
+                  {busiestMonth.label}· {busiestMonth.count}회
+                </strong>
+              </p>
+            )}
+          </div>
+
+          <div className="observatory-month-chart">
+            {monthlyObservations.map(month => {
+              const percentage =
+                month.count > 0 ? Math.max((month.count / maxMonthlyCount) * 100, 8) : 0;
+
+              return (
+                <div
+                  key={month.month}
+                  className={
+                    month.month === currentMonth
+                      ? "observatory-month-item current"
+                      : "observatory-month-item"
+                  }
+                >
+                  <div className="observatory-month-bar-area">
+                    <div
+                      className="observatory-month-bar-stack"
+                      style={{
+                        height: month.count > 0 ? `${percentage}%` : "4px",
+                      }}
+                    >
+                      {month.count > 0 && (
+                        <span className="observatory-month-count">{month.count}</span>
+                      )}
+
+                      <div
+                        className={
+                          month.count > 0 ? "observatory-month-bar active" : "observatory-month-bar"
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <span className="observatory-month-label">{month.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {!totalObservations && (
+            <p className="observatory-chart-empty">아직 올해의 관측 기록이 없습니다.</p>
+          )}
         </div>
       </section>
 
@@ -531,6 +664,59 @@ async function resolveProfileAvatar({ supabase, avatarUrl }) {
 }
 
 /* ========================================
+   MONTHLY STATISTICS
+======================================== */
+
+function createMonthlyStatistics({ observations, year, lastMonth }) {
+  const months = Array.from(
+    {
+      length: lastMonth + 1,
+    },
+    (_, month) => ({
+      month,
+
+      label: MONTH_LABELS[month],
+
+      count: 0,
+    }),
+  );
+
+  observations.forEach(observation => {
+    if (!observation.observed_at) {
+      return;
+    }
+
+    const date = new Date(observation.observed_at);
+
+    /*
+     * 한국 시간 기준으로
+     * 관측 연도 / 월 계산.
+     */
+    const parts = new Intl.DateTimeFormat("en-US", {
+      year: "numeric",
+      month: "numeric",
+      timeZone: "Asia/Seoul",
+    }).formatToParts(date);
+
+    const observationYear = Number(parts.find(part => part.type === "year")?.value);
+
+    const observationMonth = Number(parts.find(part => part.type === "month")?.value) - 1;
+
+    if (observationYear !== year) {
+      return;
+    }
+
+    if (!months[observationMonth]) {
+      return;
+    }
+
+    months[observationMonth].count += 1;
+  });
+
+  return months;
+}
+
+/* ========================================
    HELPERS
 ======================================== */
 
@@ -551,11 +737,15 @@ function formatCompactDate(value) {
     return "";
   }
 
-  const date = new Date(value);
+  const parts = new Intl.DateTimeFormat("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "Asia/Seoul",
+  }).formatToParts(new Date(value));
 
-  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const month = parts.find(part => part.type === "month")?.value;
 
-  const day = String(date.getDate()).padStart(2, "0");
+  const day = parts.find(part => part.type === "day")?.value;
 
   return `${month}.${day}`;
 }

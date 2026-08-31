@@ -5128,6 +5128,293 @@ img {
 }
 
 /* ========================================
+   MONTHLY OBSERVATION CHART
+======================================== */
+
+.observatory-chart-section {
+  padding-top: 72px;
+}
+
+.observatory-chart-year {
+  color: var(--text-muted);
+
+  font-family: var(--font-playfair), Georgia, serif;
+
+  font-size: 18px;
+
+  font-variant-numeric: tabular-nums;
+}
+
+.observatory-chart-card {
+  position: relative;
+
+  overflow: hidden;
+
+  padding: 26px 28px 24px;
+
+  border: 1px solid var(--border);
+
+  border-radius: 16px;
+
+  background: linear-gradient(120deg, rgba(167, 139, 250, 0.035), rgba(16, 21, 33, 0.96));
+}
+
+/* ========================================
+   CHART HEADER
+======================================== */
+
+.observatory-chart-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 30px;
+
+  min-height: 58px;
+}
+
+.observatory-chart-top > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 7px;
+}
+
+.observatory-chart-top > div > span {
+  color: var(--text-muted);
+
+  font-size: 12px;
+
+  letter-spacing: 0.12em;
+}
+
+.observatory-chart-top > div > strong {
+  display: flex;
+  align-items: baseline;
+
+  gap: 6px;
+
+  color: var(--text-primary);
+
+  font-family: var(--font-playfair), Georgia, serif;
+
+  font-size: 32px;
+  font-weight: 500;
+
+  line-height: 1;
+}
+
+.observatory-chart-top > div > strong small {
+  color: var(--text-muted);
+
+  font-family: var(--font-body);
+
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.observatory-chart-top p {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+
+  gap: 5px;
+
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+}
+
+.observatory-chart-top p strong {
+  color: var(--primary);
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ========================================
+   MONTH BARS
+======================================== */
+
+.observatory-month-chart {
+  height: 220px;
+
+  display: grid;
+
+  grid-template-columns: repeat(auto-fit, minmax(46px, 1fr));
+
+  align-items: stretch;
+
+  gap: 12px;
+
+  margin-top: 32px;
+  padding-top: 10px;
+
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.observatory-month-item {
+  min-width: 0;
+
+  display: grid;
+
+  grid-template-rows:
+    minmax(0, 1fr)
+    32px;
+
+  align-items: end;
+}
+
+.observatory-month-bar-area {
+  position: relative;
+
+  width: 100%;
+  height: 100%;
+
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.observatory-month-bar-area::before {
+  content: "";
+
+  position: absolute;
+
+  left: 50%;
+  bottom: 0;
+
+  width: min(100%, 48px);
+  height: 4px;
+
+  transform: translateX(-50%);
+
+  border-radius: 999px 999px 0 0;
+
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.observatory-month-bar {
+  position: relative;
+  z-index: 1;
+
+  width: min(100%, 48px);
+  height: 0;
+
+  min-height: 4px;
+
+  border-radius: 8px 8px 0 0;
+
+  background: rgba(255, 255, 255, 0.055);
+
+  transition:
+    height 0.35s ease,
+    background 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.observatory-month-bar.active {
+  min-height: 8px;
+
+  background: linear-gradient(180deg, var(--primary), rgba(167, 139, 250, 0.5));
+
+  box-shadow: 0 0 22px rgba(167, 139, 250, 0.08);
+}
+
+.observatory-month-item.current .observatory-month-bar.active {
+  background: linear-gradient(180deg, var(--secondary), var(--primary));
+
+  box-shadow: 0 0 26px rgba(125, 211, 252, 0.12);
+}
+
+/* ========================================
+   MONTH COUNT
+======================================== */
+
+.observatory-month-bar-stack {
+  position: relative;
+
+  width: min(100%, 48px);
+  min-height: 4px;
+
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  flex-direction: column;
+}
+
+.observatory-month-count {
+  position: absolute;
+
+  left: 50%;
+  bottom: calc(100% + 8px);
+
+  transform: translateX(-50%);
+
+  color: var(--primary);
+
+  font-family: var(--font-playfair), Georgia, serif;
+
+  font-size: 12px;
+}
+
+.observatory-month-bar {
+  width: 100%;
+  height: 100%;
+
+  min-height: 4px;
+
+  border-radius: 8px 8px 0 0;
+
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.observatory-month-bar.active {
+  min-height: 8px;
+
+  background: linear-gradient(180deg, var(--primary), rgba(167, 139, 250, 0.5));
+}
+
+/* ========================================
+   MONTH LABEL
+======================================== */
+
+.observatory-month-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 32px;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+  font-weight: 500;
+
+  letter-spacing: 0.04em;
+}
+
+.observatory-month-item.current .observatory-month-label {
+  color: var(--primary);
+}
+
+/* ========================================
+   EMPTY
+======================================== */
+
+.observatory-chart-empty {
+  margin: 18px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+
+  text-align: center;
+}
+
+/* ========================================
    LIBRARY SECTION
 ======================================== */
 
@@ -5543,6 +5830,48 @@ img {
 
   .observatory-empty-card > a {
     grid-column: 2;
+  }
+
+  .observatory-chart-section {
+    padding-top: 58px;
+  }
+
+  .observatory-chart-card {
+    padding: 22px 16px 20px;
+  }
+
+  .observatory-chart-top {
+    min-height: 0;
+
+    align-items: flex-start;
+  }
+
+  .observatory-chart-top > div > strong {
+    font-size: 28px;
+  }
+
+  .observatory-chart-top p {
+    display: none;
+  }
+
+  .observatory-month-chart {
+    height: 180px;
+
+    gap: 6px;
+
+    margin-top: 28px;
+
+    overflow-x: auto;
+
+    grid-template-columns: repeat(auto-fit, minmax(38px, 1fr));
+  }
+
+  .observatory-month-bar-stack {
+    width: min(100%, 34px);
+  }
+
+  .observatory-month-label {
+    font-size: 12px;
   }
 }
 
