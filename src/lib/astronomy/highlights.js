@@ -3,13 +3,10 @@ import * as Astronomy from "astronomy-engine";
 const SEOUL = new Astronomy.Observer(37.5665, 126.978, 0);
 
 /*
- * J2000 기준 고정 천체 좌표.
+ * J2000 기준 고정 천체 좌표
  *
  * ra  = 적경(hours)
  * dec = 적위(degrees)
- *
- * 별 / 성운 / 성단 / 은하는
- * 짧은 기간에는 사실상 고정된 위치로 취급할 수 있다.
  */
 const FIXED_OBJECTS = {
   /* =========================
@@ -190,56 +187,63 @@ const FIXED_OBJECTS = {
 };
 
 /*
- * 태양계 천체는 고정 좌표가 아니라
- * 실제 시각에 따라 위치가 계속 바뀐다.
+ * 태양계 천체는 시간에 따라
+ * 실제 위치가 계속 변하므로
+ * Astronomy Engine으로 계산한다.
  */
 const SOLAR_SYSTEM_BODIES = {
   moon: Astronomy.Body.Moon,
+
   mercury: Astronomy.Body.Mercury,
+
   venus: Astronomy.Body.Venus,
+
   mars: Astronomy.Body.Mars,
+
   jupiter: Astronomy.Body.Jupiter,
+
   saturn: Astronomy.Body.Saturn,
+
   uranus: Astronomy.Body.Uranus,
+
   neptune: Astronomy.Body.Neptune,
 };
 
 const TYPE_LABELS = {
   moon: "Planetary Satellite",
+
   planet: "Planet",
+
   star: "Star",
+
   cluster: "Star Cluster",
+
   nebula: "Nebula",
+
   galaxy: "Galaxy",
 };
 
 const SAMPLE_MINUTES = 30;
 
 /*
- * 실제 관측 후보가 되기 위한
- * 최소 고도.
+ * 관측 추천 최소 고도.
  *
- * 20도 아래는 지평선 / 건물 / 대기 영향이
- * 커지기 때문에 추천에서 제외한다.
+ * 20도 아래는 지평선과 대기의
+ * 영향을 크게 받으므로 추천에서 제외한다.
  */
 const MIN_ALTITUDE = 20;
 
 /*
- * 태양 고도 -12도 이하부터
- * 천문 관측 후보 시간으로 취급.
- *
- * 완전한 astronomical twilight(-18°)까지
- * 기다리면 여름철 추천 가능 시간이
- * 지나치게 짧아질 수 있어 -12°를 사용한다.
+ * 태양 고도 -12° 이하부터
+ * 실질적인 밤하늘 관측 후보로 본다.
  */
 const MAX_SUN_ALTITUDE = -12;
 
-export function getTonightHighlights({
-  objects,
-  weatherScore = 5,
-  moonIllumination = 0,
-  now = new Date(),
-}) {
+/* ========================================
+   TONIGHT'S HIGHLIGHTS
+======================================== */
+
+export function getTonightHighlights({ objects, moonIllumination = 0, now = new Date() }) {
   if (!objects?.length) {
     return [];
   }
@@ -262,15 +266,8 @@ export function getTonightHighlights({
     .sort((a, b) => b.rankScore - a.rankScore);
 
   /*
-   * 같은 종류의 천체만 3개가 몰리는 것을
-   * 조금 방지한다.
-   *
-   * 예:
-   * Star / Star / Star
-   *
-   * 보다는 가능하다면
-   * Planet / Star / Galaxy
-   * 처럼 다양한 추천을 제공.
+   * 같은 종류만 3개 연속으로
+   * 추천되는 것을 조금 방지한다.
    */
   return selectDiverseHighlights(candidates, 3);
 }
@@ -286,20 +283,32 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
 
   const visibleSamples = timeSamples
     .map(date => {
-      const sun = getSolarAltitude(date);
+      const sunAltitude = getSolarAltitude(date);
 
-      if (sun > MAX_SUN_ALTITUDE) {
+      /*
+       * 아직 하늘이 충분히
+       * 어둡지 않은 시간 제외.
+       */
+      if (sunAltitude > MAX_SUN_ALTITUDE) {
         return null;
       }
 
       const position = getObjectPosition(object.external_id, date);
 
-      if (!position || position.altitude < MIN_ALTITUDE) {
+      if (!position) {
+        return null;
+      }
+
+      /*
+       * 너무 낮은 천체 제외.
+       */
+      if (position.altitude < MIN_ALTITUDE) {
         return null;
       }
 
       return {
         date,
+
         ...position,
       };
     })
@@ -316,7 +325,8 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
   }
 
   /*
-   * 가장 오래 관측 가능한 구간을 사용.
+   * 가장 오래 연속으로
+   * 관측 가능한 구간 선택.
    */
   const bestBlock = [...blocks].sort((a, b) => b.length - a.length)[0];
 
@@ -340,6 +350,10 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
     astronomyScore,
   });
 
+  const startTime = formatKstTime(bestBlock[0].date);
+
+  const endTime = formatKstTime(addMinutes(bestBlock[bestBlock.length - 1].date, SAMPLE_MINUTES));
+
   return {
     ...object,
 
@@ -355,15 +369,57 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
 
     peakDirection: getDirectionLabel(peakSample.azimuth),
 
-    startTime: formatKstTime(bestBlock[0].date),
+    startTime,
 
-    endTime: formatKstTime(addMinutes(bestBlock[bestBlock.length - 1].date, SAMPLE_MINUTES)),
+    endTime,
 
-    timeLabel: `${formatKstTime(bestBlock[0].date)} — ${formatKstTime(
-      addMinutes(bestBlock[bestBlock.length - 1].date, SAMPLE_MINUTES),
-    )}`,
+    timeLabel: `${startTime} — ${endTime}`,
 
     rankScore: astronomyScore * 10 + maxAltitude * 0.08,
+  };
+}
+
+/* ========================================
+   CURRENT OBJECT OBSERVATION
+======================================== */
+
+/*
+ * Object Detail에서 사용할
+ * 현재 시각 기준 관측 정보.
+ *
+ * 서울 기준으로:
+ * - 현재 고도
+ * - 현재 방위각
+ * - 현재 방위
+ * - 현재 태양 고도
+ *
+ * 를 반환한다.
+ */
+export function getCurrentObjectObservation({ externalId, now = new Date() }) {
+  if (!externalId) {
+    return null;
+  }
+
+  const position = getObjectPosition(externalId, now);
+
+  if (!position) {
+    return null;
+  }
+
+  const sunAltitude = getSolarAltitude(now);
+
+  return {
+    altitude: position.altitude,
+
+    altitudeLabel: `${Math.round(position.altitude)}°`,
+
+    azimuth: position.azimuth,
+
+    azimuthLabel: `${Math.round(position.azimuth)}°`,
+
+    direction: getDirectionLabel(position.azimuth),
+
+    sunAltitude,
   };
 }
 
@@ -371,12 +427,15 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
    POSITION
 ======================================== */
 
-function getObjectPosition(externalId, date) {
+export function getObjectPosition(externalId, date = new Date()) {
   const solarBody = SOLAR_SYSTEM_BODIES[externalId];
 
   /*
-   * 달 / 행성
+   * =========================
+   * MOON / PLANETS
+   * =========================
    */
+
   if (solarBody) {
     const equatorial = Astronomy.Equator(solarBody, date, SEOUL, true, true);
 
@@ -390,8 +449,13 @@ function getObjectPosition(externalId, date) {
   }
 
   /*
-   * 별 / Messier 천체
+   * =========================
+   * FIXED OBJECTS
+   * =========================
+   *
+   * 별 / 성운 / 성단 / 은하
    */
+
   const fixed = FIXED_OBJECTS[externalId];
 
   if (!fixed) {
@@ -407,6 +471,10 @@ function getObjectPosition(externalId, date) {
   };
 }
 
+/* ========================================
+   SUN POSITION
+======================================== */
+
 function getSolarAltitude(date) {
   const equatorial = Astronomy.Equator(Astronomy.Body.Sun, date, SEOUL, true, true);
 
@@ -416,15 +484,18 @@ function getSolarAltitude(date) {
 }
 
 /* ========================================
-   SCORE
+   ASTRONOMY SCORE
 ======================================== */
 
 function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllumination }) {
   let score = 0;
 
   /*
-   * 고도
+   * =========================
+   * ALTITUDE
+   * =========================
    */
+
   if (maxAltitude >= 70) {
     score += 5;
   } else if (maxAltitude >= 55) {
@@ -438,10 +509,13 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
   }
 
   /*
-   * 밝기
+   * =========================
+   * MAGNITUDE
+   * =========================
    *
-   * 등급 값은 숫자가 작을수록 밝다.
+   * 숫자가 작을수록 밝다.
    */
+
   const magnitude = Number(object.magnitude);
 
   if (Number.isFinite(magnitude)) {
@@ -457,8 +531,11 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
   }
 
   /*
-   * 관측 가능 시간
+   * =========================
+   * OBSERVATION DURATION
+   * =========================
    */
+
   if (durationHours >= 5) {
     score += 2;
   } else if (durationHours >= 3) {
@@ -468,11 +545,14 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
   }
 
   /*
-   * 밝은 달이 떠 있는 시기에는
-   * 은하 / 성운 관측 난도가 크게 상승한다.
+   * =========================
+   * MOONLIGHT PENALTY
+   * =========================
    *
-   * 단순 별이나 행성에는 적용하지 않는다.
+   * 밝은 달은 은하 / 성운 /
+   * 성단 관측을 어렵게 한다.
    */
+
   if (moonIllumination >= 70 && ["galaxy", "nebula", "cluster"].includes(object.type)) {
     score -= 1.5;
   } else if (moonIllumination >= 40 && ["galaxy", "nebula"].includes(object.type)) {
@@ -482,12 +562,16 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
   return Math.max(0, score);
 }
 
+/* ========================================
+   DISPLAY RATING
+======================================== */
+
 /*
- * 카드 별점에는 현재 기상 상태도 반영.
+ * 별점은 날씨가 아니라
+ * 천체 자체의 오늘 밤 관측 추천도를 표시.
  *
- * 천체 자체가 아무리 좋아도
- * 비가 오거나 매우 흐리면 추천 점수가
- * 높게 표시되지 않게 한다.
+ * 현재 날씨는 Home 상단의
+ * 관측 적합도에서 별도로 표현한다.
  */
 function calculateDisplayRating({ astronomyScore }) {
   if (astronomyScore >= 8) {
@@ -519,8 +603,7 @@ function selectDiverseHighlights(candidates, limit) {
   const typeCounts = new Map();
 
   /*
-   * 1차:
-   * 같은 type 최대 2개.
+   * 같은 type은 최대 2개까지.
    */
   for (const candidate of candidates) {
     const count = typeCounts.get(candidate.type) || 0;
@@ -539,10 +622,13 @@ function selectDiverseHighlights(candidates, limit) {
   }
 
   /*
-   * 후보가 부족하면 제한 없이 채움.
+   * 후보가 부족하면
+   * type 제한 없이 채운다.
    */
   for (const candidate of candidates) {
-    if (selected.some(item => item.id === candidate.id)) {
+    const alreadySelected = selected.some(item => item.id === candidate.id);
+
+    if (alreadySelected) {
       continue;
     }
 
@@ -557,20 +643,20 @@ function selectDiverseHighlights(candidates, limit) {
 }
 
 /* ========================================
-   TIME WINDOW
+   TONIGHT TIME SAMPLES
 ======================================== */
 
 function createTonightSamples(now) {
   const { year, month, day, hour } = getKstParts(now);
 
-  /*
-   * 현재가 06시 이전이면
-   * '오늘 밤'은 이미 진행 중인 전날 밤으로 본다.
-   */
   let start;
 
   let end;
 
+  /*
+   * 새벽 0~5시는
+   * 아직 전날 밤의 연장으로 본다.
+   */
   if (hour < 6) {
     start = new Date(now.getTime());
 
@@ -581,6 +667,13 @@ function createTonightSamples(now) {
       hour: 6,
     });
   } else {
+    /*
+     * 18시 이전이면
+     * 오늘 18시부터 시작.
+     *
+     * 이미 18시가 지났다면
+     * 현재 시각부터 시작.
+     */
     const evening = createKstDate({
       year,
       month,
@@ -590,9 +683,10 @@ function createTonightSamples(now) {
 
     start = now > evening ? now : evening;
 
-    const tomorrow = new Date(Date.UTC(year, month - 1, day + 1, 6 - 9, 0, 0));
-
-    end = tomorrow;
+    /*
+     * 다음날 06시까지.
+     */
+    end = new Date(Date.UTC(year, month - 1, day + 1, 6 - 9, 0, 0));
   }
 
   if (start >= end) {
@@ -613,6 +707,10 @@ function createTonightSamples(now) {
 
   return samples;
 }
+
+/* ========================================
+   CONTINUOUS BLOCKS
+======================================== */
 
 function createContinuousBlocks(samples) {
   if (!samples.length) {
@@ -648,7 +746,7 @@ function createContinuousBlocks(samples) {
    DIRECTION
 ======================================== */
 
-function getDirectionLabel(azimuth) {
+export function getDirectionLabel(azimuth) {
   const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
 
   const index = Math.round(azimuth / 45) % 8;
@@ -672,10 +770,15 @@ function formatKstTime(date) {
 function getKstParts(value) {
   const formatter = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
+
     month: "numeric",
+
     day: "numeric",
+
     hour: "numeric",
+
     hourCycle: "h23",
+
     timeZone: "Asia/Seoul",
   });
 
@@ -693,9 +796,6 @@ function getKstParts(value) {
 }
 
 function createKstDate({ year, month, day, hour, minute = 0 }) {
-  /*
-   * KST = UTC+9
-   */
   return new Date(Date.UTC(year, month - 1, day, hour - 9, minute, 0));
 }
 

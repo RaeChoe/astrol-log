@@ -2,37 +2,41 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import FavoriteButton from "@/components/celestial/FavoriteButton";
+
 import { createClient } from "@/lib/supabase/server";
+
+import { getTodaySkyData } from "@/lib/astronomy/today";
+
+import { getCurrentObjectObservation } from "@/lib/astronomy/highlights";
 
 const TYPE_LABELS = {
   planet: "Planet",
+
   moon: "Planetary Satellite",
+
   star: "Star",
+
   cluster: "Star Cluster",
+
   nebula: "Nebula",
+
   galaxy: "Galaxy",
 };
 
 const COLLECTION_LABELS = {
   solar_system: "Solar System",
+
   messier: "Messier Objects",
+
   star: "Stars",
 };
 
 const FALLBACK_IMAGES = {
   moon: "/images/home/moon.png",
-  saturn: "/images/home/saturn.png",
-  m31: "/images/home/m31.png",
-};
 
-/*
- * 현재는 천문 API 연결 전이므로
- * 고도 / 방위 / 관측 조건은 임시 UI 데이터.
- */
-const OBSERVATION_MOCK = {
-  altitude: "48°",
-  direction: "NE",
-  condition: "좋음",
+  saturn: "/images/home/saturn.png",
+
+  m31: "/images/home/m31.png",
 };
 
 export async function generateMetadata({ params }) {
@@ -73,7 +77,7 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 천체 정보
+   * CELESTIAL OBJECT
    * =========================
    */
 
@@ -107,11 +111,38 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 로그인 사용자
+   * CURRENT SKY
    * =========================
    *
-   * 천체 상세 페이지 자체는
-   * 비로그인 상태에서도 볼 수 있다.
+   * 기상청 날씨
+   * +
+   * 현재 천체 위치 계산
+   */
+
+  const now = new Date();
+
+  const [sky, currentObservation] = await Promise.all([
+    getTodaySkyData(),
+
+    Promise.resolve(
+      getCurrentObjectObservation({
+        externalId: object.external_id,
+
+        now,
+      }),
+    ),
+  ]);
+
+  const currentCondition = getCurrentObservationCondition({
+    observation: currentObservation,
+
+    weatherCondition: sky.observationCondition,
+  });
+
+  /*
+   * =========================
+   * USER
+   * =========================
    */
 
   const {
@@ -128,15 +159,11 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 사용자 데이터
+   * USER DATA
    * =========================
    */
 
   if (user) {
-    /*
-     * 관심 천체 여부와 관측 기록을
-     * 서로 독립적으로 동시에 조회한다.
-     */
     const [favoriteResult, observationsResult] = await Promise.all([
       supabase
         .from("favorites")
@@ -176,9 +203,7 @@ export default async function ObjectDetailPage({ params }) {
     ]);
 
     /*
-     * =========================
      * FAVORITE
-     * =========================
      */
 
     if (favoriteResult.error) {
@@ -188,9 +213,7 @@ export default async function ObjectDetailPage({ params }) {
     }
 
     /*
-     * =========================
      * OBSERVATIONS
-     * =========================
      */
 
     if (observationsResult.error) {
@@ -202,11 +225,7 @@ export default async function ObjectDetailPage({ params }) {
     }
 
     /*
-     * 최근 관측 기록의 첫 번째 사진을
-     * 미리보기로 사용.
-     *
-     * Storage bucket이 private이므로
-     * signed URL 생성.
+     * 최근 관측 사진
      */
 
     if (latestObservation?.observation_images?.length) {
@@ -236,7 +255,7 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
-   * 화면 표시 값
+   * DISPLAY VALUES
    * =========================
    */
 
@@ -275,9 +294,7 @@ export default async function ObjectDetailPage({ params }) {
       <section className="object-main-section">
         <div className="container">
           <div className="object-main-grid">
-            {/* =========================
-                OBJECT INTRO
-            ========================= */}
+            {/* OBJECT INTRO */}
 
             <div className="object-main-content">
               <span className="object-catalog">{object.catalog_name || "CELESTIAL OBJECT"}</span>
@@ -299,9 +316,7 @@ export default async function ObjectDetailPage({ params }) {
               )}
             </div>
 
-            {/* =========================
-                BASIC INFO
-            ========================= */}
+            {/* BASIC INFO */}
 
             <aside className="object-info-panel">
               <span className="object-info-heading">천체 기본 정보</span>
@@ -349,15 +364,25 @@ export default async function ObjectDetailPage({ params }) {
 
             <div className="object-observation-grid">
               <div className="object-observation-card">
-                <span>고도</span>
+                <span>현재 고도</span>
 
-                <strong className="object-observation-value">{OBSERVATION_MOCK.altitude}</strong>
+                <strong className="object-observation-value">
+                  {currentObservation?.altitudeLabel || "-"}
+                </strong>
               </div>
 
               <div className="object-observation-card">
-                <span>방위</span>
+                <span>현재 방위</span>
 
-                <strong className="object-observation-value">{OBSERVATION_MOCK.direction}</strong>
+                <strong className="object-observation-value">
+                  {currentObservation?.direction || "-"}
+                </strong>
+
+                {currentObservation && (
+                  <small className="object-observation-detail">
+                    {currentObservation.azimuthLabel}
+                  </small>
+                )}
               </div>
 
               <div className="object-observation-card">
@@ -367,17 +392,18 @@ export default async function ObjectDetailPage({ params }) {
               </div>
 
               <div className="object-observation-card">
-                <span>관측 조건</span>
+                <span>현재 관측 조건</span>
 
-                <strong className="object-observation-value accent">
-                  {OBSERVATION_MOCK.condition}
+                <strong
+                  className={`object-observation-value ${currentCondition.accent ? "accent" : ""}`}
+                >
+                  {currentCondition.label}
                 </strong>
               </div>
             </div>
 
             <p className="object-observation-notice">
-              고도, 방위, 관측 조건은 현재 UI 구현을 위한 임시 데이터이며 이후 천문 API와
-              연결됩니다.
+              서울 기준 현재 시각의 천체 위치와 기상청 기상 정보를 바탕으로 계산한 값입니다.
             </p>
           </section>
 
@@ -457,8 +483,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   }
 
   /*
-   * 로그인했지만
-   * 아직 관측하지 않은 천체
+   * 미관측
    */
   if (!latestObservation) {
     return (
@@ -540,6 +565,75 @@ function PersonalObservation({ user, object, observationCount, latestObservation
 }
 
 /* ========================================
+   CURRENT OBSERVATION CONDITION
+======================================== */
+
+function getCurrentObservationCondition({ observation, weatherCondition }) {
+  if (!observation) {
+    return {
+      label: "정보 없음",
+      accent: false,
+    };
+  }
+
+  /*
+   * 1. 천체가 지평선 아래에 있으면
+   * 현재는 관측 불가.
+   */
+  if (observation.altitude <= 0) {
+    return {
+      label: "관측 불가",
+      accent: false,
+    };
+  }
+
+  /*
+   * 2. 천체는 떠 있지만
+   * 아직 하늘이 충분히 어둡지 않음.
+   */
+  if (observation.sunAltitude > -6) {
+    return {
+      label: "관측 시간 전",
+      accent: false,
+    };
+  }
+
+  /*
+   * 3. 천체는 떠 있지만
+   * 고도가 너무 낮아 관측 조건이 좋지 않음.
+   */
+  if (observation.altitude < 20) {
+    return {
+      label: "낮은 고도",
+      accent: false,
+    };
+  }
+
+  /*
+   * 4. 천체 위치상 관측 가능하면
+   * 실제 기상청 기반 관측 적합도 표시.
+   */
+  const score = weatherCondition?.score ?? 0;
+
+  if (!score) {
+    return {
+      label: "정보 없음",
+      accent: false,
+    };
+  }
+
+  return {
+    label: weatherCondition.label,
+
+    /*
+     * 좋음 / 매우 좋음만
+     * 기존 강조 스타일 사용.
+     */
+    accent: score >= 4,
+  };
+}
+
+/* ========================================
    HELPERS
 ======================================== */
 
@@ -561,6 +655,8 @@ function formatObservationDate(value) {
     minute: "2-digit",
 
     hour12: false,
+
+    timeZone: "Asia/Seoul",
   }).format(new Date(value));
 }
 
