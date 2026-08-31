@@ -1,9 +1,12 @@
 import Link from "next/link";
+
 import { notFound } from "next/navigation";
 
 import FavoriteButton from "@/components/celestial/FavoriteButton";
 
 import { createClient } from "@/lib/supabase/server";
+
+import { getObserverLocation } from "@/lib/location";
 
 import { getTodaySkyData } from "@/lib/astronomy/today";
 
@@ -81,7 +84,11 @@ export default async function ObjectDetailPage({ params }) {
    * =========================
    */
 
-  const { data: object, error: objectError } = await supabase
+  const {
+    data: object,
+
+    error: objectError,
+  } = await supabase
     .from("celestial_objects")
     .select(
       `
@@ -111,22 +118,36 @@ export default async function ObjectDetailPage({ params }) {
 
   /*
    * =========================
+   * CURRENT LOCATION
+   * =========================
+   */
+
+  const location = await getObserverLocation();
+
+  /*
+   * =========================
    * CURRENT SKY
    * =========================
    *
-   * 기상청 날씨
-   * +
-   * 현재 천체 위치 계산
+   * 기상청:
+   * → 현재 위치 날씨
+   *
+   * Astronomy Engine:
+   * → 현재 위치 천체 고도 / 방위
    */
 
   const now = new Date();
 
   const [sky, currentObservation] = await Promise.all([
-    getTodaySkyData(),
+    getTodaySkyData(location),
 
     Promise.resolve(
       getCurrentObjectObservation({
         externalId: object.external_id,
+
+        latitude: location.latitude,
+
+        longitude: location.longitude,
 
         now,
       }),
@@ -266,6 +287,8 @@ export default async function ObjectDetailPage({ params }) {
   const collectionLabel =
     COLLECTION_LABELS[object.collection_group] || object.collection_group || "-";
 
+  const observationLocationLabel = location.source === "geolocation" ? "현재 위치" : "서울";
+
   return (
     <main className="object-detail-page">
       {/* =========================
@@ -294,8 +317,6 @@ export default async function ObjectDetailPage({ params }) {
       <section className="object-main-section">
         <div className="container">
           <div className="object-main-grid">
-            {/* OBJECT INTRO */}
-
             <div className="object-main-content">
               <span className="object-catalog">{object.catalog_name || "CELESTIAL OBJECT"}</span>
 
@@ -403,7 +424,8 @@ export default async function ObjectDetailPage({ params }) {
             </div>
 
             <p className="object-observation-notice">
-              서울 기준 현재 시각의 천체 위치와 기상청 기상 정보를 바탕으로 계산한 값입니다.
+              {observationLocationLabel} 기준 현재 시각의 천체 위치와 기상청 기상 정보를 바탕으로
+              계산한 값입니다.
             </p>
           </section>
 
@@ -455,6 +477,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   /*
    * 비로그인
    */
+
   if (!user) {
     return (
       <section className="object-personal-card">
@@ -485,6 +508,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   /*
    * 미관측
    */
+
   if (!latestObservation) {
     return (
       <section className="object-personal-card">
@@ -506,6 +530,7 @@ function PersonalObservation({ user, object, observationCount, latestObservation
   /*
    * 실제 관측 기록 존재
    */
+
   return (
     <section className="object-personal-card object-personal-card-observed">
       <div className="object-personal-content">
@@ -572,52 +597,59 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
   if (!observation) {
     return {
       label: "정보 없음",
+
       accent: false,
     };
   }
 
   /*
-   * 1. 천체가 지평선 아래에 있으면
-   * 현재는 관측 불가.
+   * 1. 지평선 아래
    */
+
   if (observation.altitude <= 0) {
     return {
       label: "관측 불가",
+
       accent: false,
     };
   }
 
   /*
    * 2. 천체는 떠 있지만
-   * 아직 하늘이 충분히 어둡지 않음.
+   * 아직 하늘이 밝음
    */
+
   if (observation.sunAltitude > -6) {
     return {
       label: "관측 시간 전",
+
       accent: false,
     };
   }
 
   /*
-   * 3. 천체는 떠 있지만
-   * 고도가 너무 낮아 관측 조건이 좋지 않음.
+   * 3. 낮은 고도
    */
+
   if (observation.altitude < 20) {
     return {
       label: "낮은 고도",
+
       accent: false,
     };
   }
 
   /*
    * 4. 천체 위치상 관측 가능하면
-   * 실제 기상청 기반 관측 적합도 표시.
+   * 현재 위치의 실제 기상 상태 표시
    */
+
   const score = weatherCondition?.score ?? 0;
 
   if (!score) {
     return {
       label: "정보 없음",
+
       accent: false,
     };
   }
@@ -625,10 +657,6 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
   return {
     label: weatherCondition.label,
 
-    /*
-     * 좋음 / 매우 좋음만
-     * 기존 강조 스타일 사용.
-     */
     accent: score >= 4,
   };
 }
@@ -648,10 +676,13 @@ function formatObservationDate(value) {
 
   return new Intl.DateTimeFormat("ko-KR", {
     year: "numeric",
+
     month: "2-digit",
+
     day: "2-digit",
 
     hour: "2-digit",
+
     minute: "2-digit",
 
     hour12: false,

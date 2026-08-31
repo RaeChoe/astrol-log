@@ -1,5 +1,8 @@
 import { Playfair_Display, Noto_Serif_KR } from "next/font/google";
+
 import Header from "@/components/layout/Header";
+import LocationInitializer from "@/components/common/LocationInitializer";
+
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -22,7 +25,10 @@ export default function RootLayout({ children }) {
   return (
     <html lang="ko">
       <body className={`${playfair.variable} ${notoSerifKR.variable}`}>
+        <LocationInitializer />
+
         <Header />
+
         {children}
       </body>
     </html>

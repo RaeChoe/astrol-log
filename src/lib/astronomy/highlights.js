@@ -1,6 +1,17 @@
 import * as Astronomy from "astronomy-engine";
 
-const SEOUL = new Astronomy.Observer(37.5665, 126.978, 0);
+const DEFAULT_LOCATION = {
+  latitude: 37.5665,
+  longitude: 126.978,
+};
+
+function createObserver({
+  latitude = DEFAULT_LOCATION.latitude,
+
+  longitude = DEFAULT_LOCATION.longitude,
+} = {}) {
+  return new Astronomy.Observer(latitude, longitude, 0);
+}
 
 /*
  * J2000 기준 고정 천체 좌표
@@ -189,7 +200,7 @@ const FIXED_OBJECTS = {
 /*
  * 태양계 천체는 시간에 따라
  * 실제 위치가 계속 변하므로
- * Astronomy Engine으로 계산한다.
+ * Astronomy Engine으로 계산.
  */
 const SOLAR_SYSTEM_BODIES = {
   moon: Astronomy.Body.Moon,
@@ -227,9 +238,6 @@ const SAMPLE_MINUTES = 30;
 
 /*
  * 관측 추천 최소 고도.
- *
- * 20도 아래는 지평선과 대기의
- * 영향을 크게 받으므로 추천에서 제외한다.
  */
 const MIN_ALTITUDE = 20;
 
@@ -243,10 +251,25 @@ const MAX_SUN_ALTITUDE = -12;
    TONIGHT'S HIGHLIGHTS
 ======================================== */
 
-export function getTonightHighlights({ objects, moonIllumination = 0, now = new Date() }) {
+export function getTonightHighlights({
+  objects,
+
+  latitude = DEFAULT_LOCATION.latitude,
+
+  longitude = DEFAULT_LOCATION.longitude,
+
+  moonIllumination = 0,
+
+  now = new Date(),
+}) {
   if (!objects?.length) {
     return [];
   }
+
+  const observer = createObserver({
+    latitude,
+    longitude,
+  });
 
   const timeSamples = createTonightSamples(now);
 
@@ -258,6 +281,7 @@ export function getTonightHighlights({ objects, moonIllumination = 0, now = new 
     .map(object =>
       analyzeObject({
         object,
+        observer,
         timeSamples,
         moonIllumination,
       }),
@@ -267,7 +291,7 @@ export function getTonightHighlights({ objects, moonIllumination = 0, now = new 
 
   /*
    * 같은 종류만 3개 연속으로
-   * 추천되는 것을 조금 방지한다.
+   * 추천되는 것을 조금 방지.
    */
   return selectDiverseHighlights(candidates, 3);
 }
@@ -276,14 +300,14 @@ export function getTonightHighlights({ objects, moonIllumination = 0, now = new 
    OBJECT ANALYSIS
 ======================================== */
 
-function analyzeObject({ object, timeSamples, moonIllumination }) {
+function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
   if (!object?.external_id) {
     return null;
   }
 
   const visibleSamples = timeSamples
     .map(date => {
-      const sunAltitude = getSolarAltitude(date);
+      const sunAltitude = getSolarAltitude(date, observer);
 
       /*
        * 아직 하늘이 충분히
@@ -293,7 +317,7 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
         return null;
       }
 
-      const position = getObjectPosition(object.external_id, date);
+      const position = getObjectPosition(object.external_id, date, observer);
 
       if (!position) {
         return null;
@@ -352,7 +376,13 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
 
   const startTime = formatKstTime(bestBlock[0].date);
 
-  const endTime = formatKstTime(addMinutes(bestBlock[bestBlock.length - 1].date, SAMPLE_MINUTES));
+  const endTime = formatKstTime(
+    addMinutes(
+      bestBlock[bestBlock.length - 1].date,
+
+      SAMPLE_MINUTES,
+    ),
+  );
 
   return {
     ...object,
@@ -385,28 +415,34 @@ function analyzeObject({ object, timeSamples, moonIllumination }) {
 
 /*
  * Object Detail에서 사용할
- * 현재 시각 기준 관측 정보.
- *
- * 서울 기준으로:
- * - 현재 고도
- * - 현재 방위각
- * - 현재 방위
- * - 현재 태양 고도
- *
- * 를 반환한다.
+ * 현재 위치 / 현재 시각 기준
+ * 천체 관측 정보.
  */
-export function getCurrentObjectObservation({ externalId, now = new Date() }) {
+export function getCurrentObjectObservation({
+  externalId,
+
+  latitude = DEFAULT_LOCATION.latitude,
+
+  longitude = DEFAULT_LOCATION.longitude,
+
+  now = new Date(),
+}) {
   if (!externalId) {
     return null;
   }
 
-  const position = getObjectPosition(externalId, now);
+  const observer = createObserver({
+    latitude,
+    longitude,
+  });
+
+  const position = getObjectPosition(externalId, now, observer);
 
   if (!position) {
     return null;
   }
 
-  const sunAltitude = getSolarAltitude(now);
+  const sunAltitude = getSolarAltitude(now, observer);
 
   return {
     altitude: position.altitude,
@@ -427,7 +463,7 @@ export function getCurrentObjectObservation({ externalId, now = new Date() }) {
    POSITION
 ======================================== */
 
-export function getObjectPosition(externalId, date = new Date()) {
+export function getObjectPosition(externalId, date = new Date(), observer = createObserver()) {
   const solarBody = SOLAR_SYSTEM_BODIES[externalId];
 
   /*
@@ -437,9 +473,9 @@ export function getObjectPosition(externalId, date = new Date()) {
    */
 
   if (solarBody) {
-    const equatorial = Astronomy.Equator(solarBody, date, SEOUL, true, true);
+    const equatorial = Astronomy.Equator(solarBody, date, observer, true, true);
 
-    const horizon = Astronomy.Horizon(date, SEOUL, equatorial.ra, equatorial.dec, "normal");
+    const horizon = Astronomy.Horizon(date, observer, equatorial.ra, equatorial.dec, "normal");
 
     return {
       altitude: horizon.altitude,
@@ -462,7 +498,7 @@ export function getObjectPosition(externalId, date = new Date()) {
     return null;
   }
 
-  const horizon = Astronomy.Horizon(date, SEOUL, fixed.ra, fixed.dec, "normal");
+  const horizon = Astronomy.Horizon(date, observer, fixed.ra, fixed.dec, "normal");
 
   return {
     altitude: horizon.altitude,
@@ -475,10 +511,10 @@ export function getObjectPosition(externalId, date = new Date()) {
    SUN POSITION
 ======================================== */
 
-function getSolarAltitude(date) {
-  const equatorial = Astronomy.Equator(Astronomy.Body.Sun, date, SEOUL, true, true);
+function getSolarAltitude(date, observer = createObserver()) {
+  const equatorial = Astronomy.Equator(Astronomy.Body.Sun, date, observer, true, true);
 
-  const horizon = Astronomy.Horizon(date, SEOUL, equatorial.ra, equatorial.dec, "normal");
+  const horizon = Astronomy.Horizon(date, observer, equatorial.ra, equatorial.dec, "normal");
 
   return horizon.altitude;
 }
@@ -548,9 +584,6 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
    * =========================
    * MOONLIGHT PENALTY
    * =========================
-   *
-   * 밝은 달은 은하 / 성운 /
-   * 성단 관측을 어렵게 한다.
    */
 
   if (moonIllumination >= 70 && ["galaxy", "nebula", "cluster"].includes(object.type)) {
@@ -568,10 +601,7 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
 
 /*
  * 별점은 날씨가 아니라
- * 천체 자체의 오늘 밤 관측 추천도를 표시.
- *
- * 현재 날씨는 Home 상단의
- * 관측 적합도에서 별도로 표현한다.
+ * 천체 자체의 오늘 밤 관측 추천도.
  */
 function calculateDisplayRating({ astronomyScore }) {
   if (astronomyScore >= 8) {
@@ -603,7 +633,8 @@ function selectDiverseHighlights(candidates, limit) {
   const typeCounts = new Map();
 
   /*
-   * 같은 type은 최대 2개까지.
+   * 같은 type은
+   * 최대 2개까지.
    */
   for (const candidate of candidates) {
     const count = typeCounts.get(candidate.type) || 0;
@@ -623,7 +654,7 @@ function selectDiverseHighlights(candidates, limit) {
 
   /*
    * 후보가 부족하면
-   * type 제한 없이 채운다.
+   * type 제한 없이 채움.
    */
   for (const candidate of candidates) {
     const alreadySelected = selected.some(item => item.id === candidate.id);
@@ -655,7 +686,7 @@ function createTonightSamples(now) {
 
   /*
    * 새벽 0~5시는
-   * 아직 전날 밤의 연장으로 본다.
+   * 전날 밤의 연장으로 본다.
    */
   if (hour < 6) {
     start = new Date(now.getTime());
@@ -669,10 +700,7 @@ function createTonightSamples(now) {
   } else {
     /*
      * 18시 이전이면
-     * 오늘 18시부터 시작.
-     *
-     * 이미 18시가 지났다면
-     * 현재 시각부터 시작.
+     * 오늘 18시부터.
      */
     const evening = createKstDate({
       year,
@@ -761,8 +789,11 @@ export function getDirectionLabel(azimuth) {
 function formatKstTime(date) {
   return new Intl.DateTimeFormat("ko-KR", {
     hour: "2-digit",
+
     minute: "2-digit",
+
     hour12: false,
+
     timeZone: "Asia/Seoul",
   }).format(date);
 }

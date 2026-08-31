@@ -1,13 +1,6 @@
-const SEOUL = {
+const DEFAULT_LOCATION = {
   latitude: 37.5665,
   longitude: 126.978,
-
-  /*
-   * 서울특별시 대표 격자
-   */
-  nx: 60,
-  ny: 127,
-
   label: "SEOUL, KOREA",
 };
 
@@ -18,7 +11,33 @@ const BASE_URL = "https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0";
  */
 const VILLAGE_FORECAST_TIMES = [2, 5, 8, 11, 14, 17, 20, 23];
 
-export async function getWeatherData() {
+export async function getWeatherData({
+  latitude = DEFAULT_LOCATION.latitude,
+
+  longitude = DEFAULT_LOCATION.longitude,
+
+  label = DEFAULT_LOCATION.label,
+} = {}) {
+  /*
+   * 전달받은 실제 위도 / 경도를
+   * 기상청 격자 좌표로 변환.
+   *
+   * 좌표가 전달되지 않으면
+   * 서울을 fallback으로 사용.
+   */
+  const grid = convertLatLonToKmaGrid(latitude, longitude);
+
+  const location = {
+    latitude,
+    longitude,
+
+    nx: grid.nx,
+
+    ny: grid.ny,
+
+    label,
+  };
+
   const apiKey = process.env.KMA_API_KEY;
 
   if (!apiKey) {
@@ -50,9 +69,9 @@ export async function getWeatherData() {
 
     base_time: currentBase.time,
 
-    nx: String(SEOUL.nx),
+    nx: String(location.nx),
 
-    ny: String(SEOUL.ny),
+    ny: String(location.ny),
   });
 
   /*
@@ -82,9 +101,9 @@ export async function getWeatherData() {
 
     base_time: forecastBase.time,
 
-    nx: String(SEOUL.nx),
+    nx: String(location.nx),
 
-    ny: String(SEOUL.ny),
+    ny: String(location.ny),
   });
 
   const [currentResponse, forecastResponse] = await Promise.all([
@@ -135,6 +154,7 @@ export async function getWeatherData() {
    * 단기예보를 찾아
    * SKY / POP 등을 현재 정보에 합친다.
    */
+
   const nearestForecast = getNearestForecast(hourly, now);
 
   const skyCode = nearestForecast?.skyCode ?? null;
@@ -143,7 +163,7 @@ export async function getWeatherData() {
     currentValues.precipitationType ?? nearestForecast?.precipitationType ?? 0;
 
   return {
-    location: SEOUL,
+    location,
 
     current: {
       temperature: currentValues.temperature,
@@ -213,9 +233,13 @@ function getResponseItems(json) {
 function parseCurrentWeather(items) {
   const values = {
     temperature: null,
+
     humidity: null,
+
     windSpeed: null,
+
     rainAmount: null,
+
     precipitationType: null,
   };
 
@@ -318,6 +342,7 @@ function parseForecastHours(items) {
 
       /*
        * 하늘상태
+       *
        * 1 맑음
        * 3 구름많음
        * 4 흐림
@@ -403,6 +428,7 @@ export function getWeatherCondition({ skyCode, precipitationType }) {
    * 강수형태가 있으면
    * SKY보다 우선.
    */
+
   switch (precipitationType) {
     case 1:
       return "비";
@@ -572,4 +598,88 @@ function toNumber(value) {
   const number = Number(value);
 
   return Number.isFinite(number) ? number : null;
+}
+
+/* ========================================
+   KMA GRID CONVERSION
+======================================== */
+
+/*
+ * 위도 / 경도를
+ * 기상청 단기예보용
+ * 격자 좌표(nx, ny)로 변환.
+ *
+ * 기상청 DFS Lambert Conformal
+ * Projection 변환식 기반.
+ */
+export function convertLatLonToKmaGrid(latitude, longitude) {
+  const safeLatitude = Number.isFinite(Number(latitude))
+    ? Number(latitude)
+    : DEFAULT_LOCATION.latitude;
+
+  const safeLongitude = Number.isFinite(Number(longitude))
+    ? Number(longitude)
+    : DEFAULT_LOCATION.longitude;
+
+  const RE = 6371.00877;
+
+  const GRID = 5.0;
+
+  const SLAT1 = 30.0;
+
+  const SLAT2 = 60.0;
+
+  const OLON = 126.0;
+
+  const OLAT = 38.0;
+
+  const XO = 43;
+
+  const YO = 136;
+
+  const DEGRAD = Math.PI / 180.0;
+
+  const re = RE / GRID;
+
+  const slat1 = SLAT1 * DEGRAD;
+
+  const slat2 = SLAT2 * DEGRAD;
+
+  const olon = OLON * DEGRAD;
+
+  const olat = OLAT * DEGRAD;
+
+  let sn = Math.tan(Math.PI * 0.25 + slat2 * 0.5) / Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+
+  sn = Math.log(Math.cos(slat1) / Math.cos(slat2)) / Math.log(sn);
+
+  let sf = Math.tan(Math.PI * 0.25 + slat1 * 0.5);
+
+  sf = (Math.pow(sf, sn) * Math.cos(slat1)) / sn;
+
+  let ro = Math.tan(Math.PI * 0.25 + olat * 0.5);
+
+  ro = (re * sf) / Math.pow(ro, sn);
+
+  let ra = Math.tan(Math.PI * 0.25 + safeLatitude * DEGRAD * 0.5);
+
+  ra = (re * sf) / Math.pow(ra, sn);
+
+  let theta = safeLongitude * DEGRAD - olon;
+
+  if (theta > Math.PI) {
+    theta -= 2.0 * Math.PI;
+  }
+
+  if (theta < -Math.PI) {
+    theta += 2.0 * Math.PI;
+  }
+
+  theta *= sn;
+
+  return {
+    nx: Math.floor(ra * Math.sin(theta) + XO + 0.5),
+
+    ny: Math.floor(ro - ra * Math.cos(theta) + YO + 0.5),
+  };
 }

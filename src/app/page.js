@@ -2,6 +2,8 @@ import Link from "next/link";
 
 import { createClient } from "@/lib/supabase/server";
 
+import { getObserverLocation } from "@/lib/location";
+
 import { getTodaySkyData } from "@/lib/astronomy/today";
 
 import { getTonightHighlights } from "@/lib/astronomy/highlights";
@@ -27,11 +29,25 @@ export default async function HomePage() {
 
   /*
    * =========================
+   * CURRENT LOCATION
+   * =========================
+   *
+   * 위치 권한 허용:
+   * → 브라우저 geolocation 좌표
+   *
+   * 위치가 없거나 거부:
+   * → 서울 fallback
+   */
+
+  const location = await getObserverLocation();
+
+  /*
+   * =========================
    * TODAY SKY
    * =========================
    */
 
-  const sky = await getTodaySkyData();
+  const sky = await getTodaySkyData(location);
 
   /*
    * =========================
@@ -62,6 +78,9 @@ export default async function HomePage() {
    * =========================
    * TONIGHT'S HIGHLIGHTS
    * =========================
+   *
+   * 이제 서울 고정이 아니라
+   * 현재 사용자 위치 기준.
    */
 
   const highlights = error
@@ -69,7 +88,9 @@ export default async function HomePage() {
     : getTonightHighlights({
         objects: objects || [],
 
-        weatherScore: sky.observationCondition.score,
+        latitude: location.latitude,
+
+        longitude: location.longitude,
 
         moonIllumination: sky.moonIllumination,
       });
@@ -132,6 +153,8 @@ export default async function HomePage() {
     },
   ];
 
+  const locationLabel = location.source === "geolocation" ? "CURRENT LOCATION" : "SEOUL, KOREA";
+
   return (
     <main className="today-page">
       {/* =========================
@@ -143,7 +166,7 @@ export default async function HomePage() {
 
         <div className="container today-hero-inner">
           <div className="today-hero-content">
-            <p className="today-eyebrow">GOOD EVENING · {sky.location}</p>
+            <p className="today-eyebrow">GOOD EVENING · {locationLabel}</p>
 
             <h1 className="heading-ko today-title">
               <span>오늘 밤,</span>
@@ -268,7 +291,7 @@ export default async function HomePage() {
 
           {/*
            * 아직 남아 있는 mock.
-           * Highlights 다음 단계에서 처리.
+           * 다음 단계에서 실제화 예정.
            */}
           <article className="event-card">
             <div className="event-content">

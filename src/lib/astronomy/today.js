@@ -2,14 +2,43 @@ import { getAstronomyData } from "@/lib/astronomy/moon";
 
 import { getWeatherData } from "@/lib/astronomy/weather";
 
-export async function getTodaySkyData() {
+const DEFAULT_LOCATION = {
+  latitude: 37.5665,
+  longitude: 126.978,
+  label: "SEOUL, KOREA",
+  source: "default",
+};
+
+export async function getTodaySkyData(location = DEFAULT_LOCATION) {
   const now = new Date();
+
+  const observerLocation = {
+    latitude: location?.latitude ?? DEFAULT_LOCATION.latitude,
+
+    longitude: location?.longitude ?? DEFAULT_LOCATION.longitude,
+
+    label: location?.label ?? DEFAULT_LOCATION.label,
+
+    source: location?.source ?? DEFAULT_LOCATION.source,
+  };
 
   try {
     const [weather, astronomy] = await Promise.all([
-      getWeatherData(),
+      getWeatherData({
+        latitude: observerLocation.latitude,
 
-      Promise.resolve(getAstronomyData(now)),
+        longitude: observerLocation.longitude,
+
+        label: observerLocation.label,
+      }),
+
+      Promise.resolve(
+        getAstronomyData(now, {
+          latitude: observerLocation.latitude,
+
+          longitude: observerLocation.longitude,
+        }),
+      ),
     ]);
 
     const observationCondition = calculateObservationCondition(weather.current);
@@ -24,6 +53,12 @@ export async function getTodaySkyData() {
       source: "live",
 
       location: weather.location.label,
+
+      locationSource: observerLocation.source,
+
+      latitude: observerLocation.latitude,
+
+      longitude: observerLocation.longitude,
 
       date: formatDate(now),
 
@@ -42,12 +77,26 @@ export async function getTodaySkyData() {
       stack: error?.stack,
     });
 
-    const astronomy = getAstronomyData(now);
+    /*
+     * 날씨 API가 실패하더라도
+     * 천문 데이터는 현재 위치 기준으로 유지.
+     */
+    const astronomy = getAstronomyData(now, {
+      latitude: observerLocation.latitude,
+
+      longitude: observerLocation.longitude,
+    });
 
     return {
       source: "fallback",
 
-      location: "SEOUL, KOREA",
+      location: observerLocation.label,
+
+      locationSource: observerLocation.source,
+
+      latitude: observerLocation.latitude,
+
+      longitude: observerLocation.longitude,
 
       date: formatDate(now),
 
@@ -115,6 +164,7 @@ function calculateObservationCondition(weather) {
   /*
    * 강수
    */
+
   if (weather.precipitationType && weather.precipitationType !== 0) {
     score -= 3;
   }
@@ -130,6 +180,7 @@ function calculateObservationCondition(weather) {
   /*
    * 바람
    */
+
   const windSpeed = weather.windSpeed ?? 0;
 
   if (windSpeed >= 14) {
@@ -141,6 +192,7 @@ function calculateObservationCondition(weather) {
   /*
    * 습도
    */
+
   const humidity = weather.humidity ?? 0;
 
   if (humidity >= 90) {
@@ -200,6 +252,7 @@ function getRecommendedTime({ forecastHours, now }) {
    *
    * 18:00 ~ 05:59
    */
+
   const nighttime = forecastHours.filter(forecast => {
     if (forecast.timestamp < nowTime) {
       return false;
@@ -225,8 +278,9 @@ function getRecommendedTime({ forecastHours, now }) {
   let bestWindow = null;
 
   /*
-   * 3시간 연속 구간을 비교한다.
+   * 3시간 연속 구간 비교
    */
+
   for (let index = 0; index <= nighttime.length - 3; index += 1) {
     const window = nighttime.slice(index, index + 3);
 
@@ -245,9 +299,9 @@ function getRecommendedTime({ forecastHours, now }) {
     }
 
     /*
-     * 비 / 눈이 있는 구간은
-     * 관측 추천 후보에서 제외.
+     * 비 / 눈 제외
      */
+
     const hasPrecipitation = window.some(
       forecast => forecast.precipitationType && forecast.precipitationType !== 0,
     );
@@ -257,8 +311,9 @@ function getRecommendedTime({ forecastHours, now }) {
     }
 
     /*
-     * 3시간 모두 흐림이면 제외.
+     * 모두 흐림 제외
      */
+
     const allCloudy = window.every(forecast => forecast.skyCode === 4);
 
     if (allCloudy) {
@@ -266,8 +321,9 @@ function getRecommendedTime({ forecastHours, now }) {
     }
 
     /*
-     * 평균 강수확률이 너무 높으면 제외.
+     * 평균 강수 확률
      */
+
     const averagePrecipitationProbability =
       window.reduce((total, forecast) => total + (forecast.precipitationProbability ?? 0), 0) /
       window.length;
@@ -287,9 +343,6 @@ function getRecommendedTime({ forecastHours, now }) {
     }
   }
 
-  /*
-   * 관측 가능한 구간이 없음
-   */
   if (!bestWindow) {
     return {
       available: false,
@@ -302,14 +355,6 @@ function getRecommendedTime({ forecastHours, now }) {
     };
   }
 
-  /*
-   * 후보가 있더라도
-   * 전체적으로 너무 안 좋은 경우
-   * 추천하지 않음.
-   *
-   * 3시간 누적 penalty 170 이상이면
-   * 관측 환경이 좋지 않다고 판단.
-   */
   if (bestWindow.penalty >= 170) {
     return {
       available: false,
@@ -344,9 +389,6 @@ function getRecommendedTime({ forecastHours, now }) {
 function getForecastPenalty(forecast) {
   let penalty = 0;
 
-  /*
-   * 하늘 상태
-   */
   if (forecast.skyCode === 3) {
     penalty += 25;
   }
@@ -355,26 +397,14 @@ function getForecastPenalty(forecast) {
     penalty += 60;
   }
 
-  /*
-   * 강수형태
-   */
   if (forecast.precipitationType && forecast.precipitationType !== 0) {
     penalty += 120;
   }
 
-  /*
-   * 강수확률
-   */
   penalty += forecast.precipitationProbability ?? 0;
 
-  /*
-   * 풍속
-   */
   penalty += (forecast.windSpeed ?? 0) * 3;
 
-  /*
-   * 습도
-   */
   const humidity = forecast.humidity ?? 0;
 
   if (humidity >= 90) {
