@@ -4,37 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 
 import { getTodaySkyData } from "@/lib/astronomy/today";
 
+import { getTonightHighlights } from "@/lib/astronomy/highlights";
+
 import { getCelestialThumbnail } from "@/lib/celestial/images";
-
-/*
- * Tonight's Highlights의
- * 추천 별점 / 관측 가능 시간은
- * 아직 임시값.
- *
- * 날짜 / 날씨 / 기온 /
- * 달 위상 / 일몰 / 월출 /
- * 관측 적합도 / 추천 시간은
- * 실제 데이터.
- */
-const HIGHLIGHT_META = {
-  moon: {
-    rating: 5,
-    time: "20:14 — 03:32",
-    label: "Planetary Satellite",
-  },
-
-  saturn: {
-    rating: 4,
-    time: "22:47 — 05:18",
-    label: "Planet",
-  },
-
-  m31: {
-    rating: 3,
-    time: "21:32 — 04:51",
-    label: "Galaxy",
-  },
-};
 
 function Rating({ value }) {
   return (
@@ -55,18 +27,15 @@ export default async function HomePage() {
 
   /*
    * =========================
-   * TODAY SKY DATA
+   * TODAY SKY
    * =========================
-   *
-   * 기상청 단기예보 API
-   * +
-   * SunCalc
    */
+
   const sky = await getTodaySkyData();
 
   /*
    * =========================
-   * CELESTIAL OBJECTS
+   * ALL CELESTIAL OBJECTS
    * =========================
    */
 
@@ -79,17 +48,31 @@ export default async function HomePage() {
       name_en,
       name_ko,
       type,
+      collection_group,
       magnitude,
       image_url,
       external_id
     `,
     )
-    .in("external_id", ["moon", "saturn", "m31"]);
+    .order("catalog_name", {
+      ascending: true,
+    });
 
-  const highlights =
-    ["moon", "saturn", "m31"]
-      .map(id => objects?.find(object => object.external_id === id))
-      .filter(Boolean) ?? [];
+  /*
+   * =========================
+   * TONIGHT'S HIGHLIGHTS
+   * =========================
+   */
+
+  const highlights = error
+    ? []
+    : getTonightHighlights({
+        objects: objects || [],
+
+        weatherScore: sky.observationCondition.score,
+
+        moonIllumination: sky.moonIllumination,
+      });
 
   /*
    * =========================
@@ -151,7 +134,9 @@ export default async function HomePage() {
 
   return (
     <main className="today-page">
-      {/* HERO */}
+      {/* =========================
+          HERO
+      ========================= */}
 
       <section className="today-hero">
         <div className="today-hero-overlay" />
@@ -189,7 +174,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* SKY SUMMARY */}
+      {/* =========================
+          SKY SUMMARY
+      ========================= */}
 
       <section className="sky-summary-section">
         <div className="container">
@@ -209,14 +196,24 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* HIGHLIGHTS */}
+      {/* =========================
+          HIGHLIGHTS
+      ========================= */}
 
       <section className="today-section">
         <div className="container">
           <div className="section-label">오늘 밤</div>
 
           <div className="today-section-heading">
-            <h2 className="display-en">Tonight&apos;s Highlights</h2>
+            <div>
+              <h2 className="display-en">Tonight&apos;s Highlights</h2>
+
+              {sky.observationCondition.score <= 2 && (
+                <p className="highlight-weather-notice">
+                  현재 기상 조건은 좋지 않지만, 천문 조건 기준 오늘 밤 주목할 천체입니다.
+                </p>
+              )}
+            </div>
 
             <Link href="/explore" className="section-link">
               모두 탐색하기 →
@@ -225,43 +222,43 @@ export default async function HomePage() {
 
           {error ? (
             <p className="section-error">천체 정보를 불러오지 못했습니다.</p>
-          ) : (
+          ) : highlights.length ? (
             <div className="highlight-grid">
-              {highlights.map(object => {
-                const meta = HIGHLIGHT_META[object.external_id];
+              {highlights.map(object => (
+                <Link href={`/objects/${object.id}`} key={object.id} className="highlight-card">
+                  <div className="highlight-image-wrapper">
+                    <img
+                      src={getCelestialThumbnail(object)}
+                      alt={object.name_ko}
+                      className="highlight-image"
+                    />
 
-                return (
-                  <Link href={`/objects/${object.id}`} key={object.id} className="highlight-card">
-                    <div className="highlight-image-wrapper">
-                      <img
-                        src={getCelestialThumbnail(object)}
-                        alt={object.name_ko}
-                        className="highlight-image"
-                      />
+                    <span className="highlight-badge">{object.typeLabel}</span>
+                  </div>
 
-                      <span className="highlight-badge">{meta.label}</span>
+                  <div className="highlight-content">
+                    <h3 className="display-en">{object.catalog_name || object.name_en}</h3>
+
+                    <p>{object.name_ko}</p>
+
+                    <div className="highlight-footer">
+                      <Rating value={object.rating} />
+
+                      <span className="highlight-time">{object.timeLabel}</span>
                     </div>
-
-                    <div className="highlight-content">
-                      <h3 className="display-en">{object.catalog_name || object.name_en}</h3>
-
-                      <p>{object.name_ko}</p>
-
-                      <div className="highlight-footer">
-                        <Rating value={meta.rating} />
-
-                        <span className="highlight-time">{meta.time}</span>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
+                  </div>
+                </Link>
+              ))}
             </div>
+          ) : (
+            <p className="section-error">오늘 밤 관측 가능한 추천 천체가 없습니다.</p>
           )}
         </div>
       </section>
 
-      {/* WEEKLY EVENT */}
+      {/* =========================
+          WEEKLY EVENT
+      ========================= */}
 
       <section className="today-section event-section">
         <div className="container">
@@ -270,9 +267,8 @@ export default async function HomePage() {
           <h2 className="heading-ko event-section-title">주요 천문 이벤트</h2>
 
           {/*
-           * 이 부분은 아직 mock.
-           * 나중에 천문 이벤트 데이터를
-           * 별도로 연결할 예정.
+           * 아직 남아 있는 mock.
+           * Highlights 다음 단계에서 처리.
            */}
           <article className="event-card">
             <div className="event-content">
