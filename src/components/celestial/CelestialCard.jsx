@@ -1,10 +1,6 @@
 import Link from "next/link";
 
-const FALLBACK_IMAGES = {
-  moon: "/images/home/moon.png",
-  saturn: "/images/home/saturn.png",
-  m31: "/images/home/m31.png",
-};
+import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 const TYPE_LABELS = {
   planet: "Planet",
@@ -16,7 +12,7 @@ const TYPE_LABELS = {
 };
 
 export default function CelestialCard({ object, observed = false, isLoggedIn = false }) {
-  const image = object.image_url || FALLBACK_IMAGES[object.external_id] || "/images/home/hero.png";
+  const image = getCelestialThumbnail(object);
 
   const typeLabel = TYPE_LABELS[object.type] || object.type;
 

@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { requireUser } from "@/lib/auth/requireUser";
 import { createClient } from "@/lib/supabase/server";
+import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 import ObservatoryProfileForm from "@/components/observatory/ObservatoryProfileForm";
 
@@ -14,12 +15,6 @@ const EQUIPMENT_LABELS = {
   binoculars: "쌍안경",
   telescope: "망원경",
   camera: "카메라",
-};
-
-const FALLBACK_IMAGES = {
-  moon: "/images/home/moon.png",
-  saturn: "/images/home/saturn.png",
-  m31: "/images/home/m31.png",
 };
 
 const MONTH_LABELS = [
@@ -165,7 +160,6 @@ export default async function ObservatoryPage() {
 
   const avatarUrl = await resolveProfileAvatar({
     supabase,
-
     avatarUrl: profile?.avatar_url,
   });
 
@@ -208,12 +202,6 @@ export default async function ObservatoryPage() {
    * =========================
    * MONTHLY STATISTICS
    * =========================
-   *
-   * 현재 연도의 1월부터 현재 월까지
-   * 월별 관측 횟수를 계산한다.
-   *
-   * 별도의 통계 테이블 없이
-   * observations의 observed_at을 이용한다.
    */
 
   const now = new Date();
@@ -260,8 +248,8 @@ export default async function ObservatoryPage() {
       let observationImage = null;
 
       /*
-       * 관측 사진은 private bucket이므로
-       * signed URL을 생성한다.
+       * 사용자가 업로드한 관측 사진은
+       * private bucket이므로 signed URL 생성.
        */
       if (representative?.image_url) {
         const { data, error } = await supabase.storage
@@ -275,10 +263,14 @@ export default async function ObservatoryPage() {
         observationImage = data?.signedUrl || null;
       }
 
+      /*
+       * 직접 촬영 사진이 없다면
+       * 천체의 카드용 thumbnail 사용.
+       */
       return {
         ...observation,
 
-        thumbnail: observationImage || getObjectImage(observation.celestial_objects),
+        thumbnail: observationImage || getCelestialThumbnail(observation.celestial_objects),
       };
     }),
   );
@@ -287,9 +279,7 @@ export default async function ObservatoryPage() {
 
   return (
     <main className="observatory-page">
-      {/* =========================
-          PROFILE
-      ========================= */}
+      {/* PROFILE */}
 
       <section className="container observatory-profile-section">
         <ObservatoryProfileForm
@@ -307,9 +297,7 @@ export default async function ObservatoryPage() {
         </div>
       </section>
 
-      {/* =========================
-          STATISTICS
-      ========================= */}
+      {/* STATISTICS */}
 
       <section className="container observatory-section">
         <div className="observatory-section-header">
@@ -340,9 +328,7 @@ export default async function ObservatoryPage() {
           />
         </div>
 
-        {/* =========================
-            COLLECTION PROGRESS
-        ========================= */}
+        {/* COLLECTION PROGRESS */}
 
         <div className="observatory-progress-card">
           <div className="observatory-progress-heading">
@@ -372,9 +358,7 @@ export default async function ObservatoryPage() {
         </div>
       </section>
 
-      {/* =========================
-          MONTHLY OBSERVATIONS
-      ========================= */}
+      {/* MONTHLY OBSERVATIONS */}
 
       <section className="container observatory-chart-section">
         <div className="observatory-section-header">
@@ -394,6 +378,7 @@ export default async function ObservatoryPage() {
 
               <strong>
                 {totalObservations}
+
                 <small>회</small>
               </strong>
             </div>
@@ -453,14 +438,10 @@ export default async function ObservatoryPage() {
         </div>
       </section>
 
-      {/* =========================
-          LIBRARY
-      ========================= */}
+      {/* LIBRARY */}
 
       <section className="container observatory-library-section">
-        {/* =========================
-            RECENT OBSERVATIONS
-        ========================= */}
+        {/* RECENT OBSERVATIONS */}
 
         <div className="observatory-library-column">
           <div className="observatory-library-heading">
@@ -491,9 +472,7 @@ export default async function ObservatoryPage() {
           )}
         </div>
 
-        {/* =========================
-            FAVORITES
-        ========================= */}
+        {/* FAVORITES */}
 
         <div className="observatory-library-column">
           <div className="observatory-library-heading">
@@ -590,7 +569,7 @@ function FavoriteObjectItem({ object }) {
   return (
     <Link href={`/objects/${object.id}`} className="observatory-compact-item">
       <div className="observatory-compact-image">
-        <img src={getObjectImage(object)} alt={object.name_ko || object.name_en} />
+        <img src={getCelestialThumbnail(object)} alt={object.name_ko || object.name_en} />
       </div>
 
       <div className="observatory-compact-content">
@@ -637,19 +616,10 @@ async function resolveProfileAvatar({ supabase, avatarUrl }) {
     return "";
   }
 
-  /*
-   * Google OAuth 프로필 이미지처럼
-   * 외부 URL이면 그대로 사용.
-   */
   if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
     return avatarUrl;
   }
 
-  /*
-   * 직접 업로드한 이미지는
-   * private profile-images bucket에 있으므로
-   * signed URL 생성.
-   */
   const { data, error } = await supabase.storage
     .from("profile-images")
     .createSignedUrl(avatarUrl, 60 * 60);
@@ -688,10 +658,6 @@ function createMonthlyStatistics({ observations, year, lastMonth }) {
 
     const date = new Date(observation.observed_at);
 
-    /*
-     * 한국 시간 기준으로
-     * 관측 연도 / 월 계산.
-     */
     const parts = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
       month: "numeric",
@@ -719,10 +685,6 @@ function createMonthlyStatistics({ observations, year, lastMonth }) {
 /* ========================================
    HELPERS
 ======================================== */
-
-function getObjectImage(object) {
-  return object?.image_url || FALLBACK_IMAGES[object?.external_id] || "/images/home/hero.png";
-}
 
 function getObjectName(object) {
   if (!object) {

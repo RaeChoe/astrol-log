@@ -4,13 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import { getTodaySkyData } from "@/lib/astronomy/today";
 
-const FALLBACK_IMAGES = {
-  moon: "/images/home/moon.png",
-
-  saturn: "/images/home/saturn.png",
-
-  m31: "/images/home/m31.png",
-};
+import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 /*
  * Tonight's Highlights의
@@ -25,25 +19,19 @@ const FALLBACK_IMAGES = {
 const HIGHLIGHT_META = {
   moon: {
     rating: 5,
-
     time: "20:14 — 03:32",
-
     label: "Planetary Satellite",
   },
 
   saturn: {
     rating: 4,
-
     time: "22:47 — 05:18",
-
     label: "Planet",
   },
 
   m31: {
     rating: 3,
-
     time: "21:32 — 04:51",
-
     label: "Galaxy",
   },
 };
@@ -159,14 +147,11 @@ export default async function HomePage() {
 
       icon: "◇",
     },
-    ,
   ];
 
   return (
     <main className="today-page">
-      {/* =========================
-          HERO
-      ========================= */}
+      {/* HERO */}
 
       <section className="today-hero">
         <div className="today-hero-overlay" />
@@ -204,9 +189,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
-          SKY SUMMARY
-      ========================= */}
+      {/* SKY SUMMARY */}
 
       <section className="sky-summary-section">
         <div className="container">
@@ -226,9 +209,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
-          HIGHLIGHTS
-      ========================= */}
+      {/* HIGHLIGHTS */}
 
       <section className="today-section">
         <div className="container">
@@ -253,7 +234,7 @@ export default async function HomePage() {
                   <Link href={`/objects/${object.id}`} key={object.id} className="highlight-card">
                     <div className="highlight-image-wrapper">
                       <img
-                        src={object.image_url || FALLBACK_IMAGES[object.external_id]}
+                        src={getCelestialThumbnail(object)}
                         alt={object.name_ko}
                         className="highlight-image"
                       />
@@ -280,9 +261,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
-          WEEKLY EVENT
-      ========================= */}
+      {/* WEEKLY EVENT */}
 
       <section className="today-section event-section">
         <div className="container">

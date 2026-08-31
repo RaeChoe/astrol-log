@@ -1,13 +1,9 @@
 import Link from "next/link";
 
-const FALLBACK_IMAGES = {
-  moon: "/images/home/moon.png",
-  saturn: "/images/home/saturn.png",
-  m31: "/images/home/m31.png",
-};
+import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 export default function CollectionCard({ object }) {
-  const image = object.image_url || FALLBACK_IMAGES[object.external_id] || "/images/home/hero.png";
+  const image = getCelestialThumbnail(object);
 
   return (
     <Link
