@@ -9,8 +9,7 @@ export default async function ExplorePage() {
   const supabase = await createClient();
 
   /*
-   * Explore는 로그인하지 않아도 볼 수 있는 페이지.
-   * 로그인 사용자인 경우에만 관측 상태를 추가한다.
+   * Explore는 비로그인 사용자도 접근 가능.
    */
   const {
     data: { user },
@@ -42,27 +41,35 @@ export default async function ExplorePage() {
     console.error("Explore 천체 조회 오류:", objectsError);
   }
 
-  /*
-   * 로그인 사용자라면
-   * 어떤 천체를 관측했는지 조회
-   */
   let observedObjectIds = [];
+  let favoriteObjectIds = [];
 
+  /*
+   * 로그인한 사용자라면
+   * 관측 상태와 관심 천체를 동시에 조회.
+   */
   if (user) {
-    const { data: observations, error: observationsError } = await supabase
-      .from("observations")
-      .select("celestial_object_id")
-      .eq("user_id", user.id);
+    const [observationsResult, favoritesResult] = await Promise.all([
+      supabase.from("observations").select("celestial_object_id").eq("user_id", user.id),
 
-    if (observationsError) {
-      console.error("Explore 관측 상태 조회 오류:", observationsError);
+      supabase.from("favorites").select("celestial_object_id").eq("user_id", user.id),
+    ]);
+
+    if (observationsResult.error) {
+      console.error("Explore 관측 상태 조회 오류:", observationsResult.error);
     } else {
-      /*
-       * 같은 천체를 여러 번 관측해도
-       * Explore에서는 한 번만 관측 완료 처리.
-       */
       observedObjectIds = [
-        ...new Set((observations || []).map(observation => observation.celestial_object_id)),
+        ...new Set(
+          (observationsResult.data || []).map(observation => observation.celestial_object_id),
+        ),
+      ];
+    }
+
+    if (favoritesResult.error) {
+      console.error("Explore 관심 천체 조회 오류:", favoritesResult.error);
+    } else {
+      favoriteObjectIds = [
+        ...new Set((favoritesResult.data || []).map(favorite => favorite.celestial_object_id)),
       ];
     }
   }
@@ -71,6 +78,7 @@ export default async function ExplorePage() {
     <ExploreClient
       objects={objects || []}
       observedObjectIds={observedObjectIds}
+      favoriteObjectIds={favoriteObjectIds}
       isLoggedIn={Boolean(user)}
     />
   );

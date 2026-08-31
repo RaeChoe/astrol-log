@@ -36,6 +36,7 @@ const FILTERS = [
 export default function ExploreClient({
   objects = [],
   observedObjectIds = [],
+  favoriteObjectIds = [],
   isLoggedIn = false,
 }) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -45,34 +46,47 @@ export default function ExploreClient({
   const [currentPage, setCurrentPage] = useState(1);
 
   /*
-   * 로그인 사용자가 이미 관측한 천체 id
+   * 관측 완료 천체 Set
    */
   const observedSet = useMemo(() => {
     return new Set(observedObjectIds.map(String));
   }, [observedObjectIds]);
 
   /*
-   * 검색 + 필터
+   * 관심 천체 Set
+   */
+  const favoriteSet = useMemo(() => {
+    return new Set(favoriteObjectIds.map(String));
+  }, [favoriteObjectIds]);
+
+  /*
+   * 검색 + 카테고리 + 관심 천체 필터
    */
   const filteredObjects = useMemo(() => {
     const search = searchTerm.trim().toLowerCase();
 
     return objects.filter(object => {
+      const objectId = String(object.id);
+
       const matchesSearch =
         !search ||
         object.catalog_name?.toLowerCase().includes(search) ||
         object.name_en?.toLowerCase().includes(search) ||
         object.name_ko?.toLowerCase().includes(search);
 
-      const matchesFilter =
-        activeFilter === "all" ||
-        (activeFilter === "solar_system"
-          ? object.collection_group === "solar_system"
-          : object.type === activeFilter);
+      let matchesFilter = true;
+
+      if (activeFilter === "favorite") {
+        matchesFilter = favoriteSet.has(objectId);
+      } else if (activeFilter === "solar_system") {
+        matchesFilter = object.collection_group === "solar_system";
+      } else if (activeFilter !== "all") {
+        matchesFilter = object.type === activeFilter;
+      }
 
       return matchesSearch && matchesFilter;
     });
-  }, [objects, searchTerm, activeFilter]);
+  }, [objects, searchTerm, activeFilter, favoriteSet]);
 
   const totalPages = Math.max(1, Math.ceil(filteredObjects.length / ITEMS_PER_PAGE));
 
@@ -83,8 +97,8 @@ export default function ExploreClient({
   }, [filteredObjects, currentPage]);
 
   /*
-   * 검색어나 필터 변경 시
-   * 첫 페이지로 초기화
+   * 검색 / 필터 변경 시
+   * 첫 페이지로 이동.
    */
   useEffect(() => {
     setCurrentPage(1);
@@ -142,6 +156,21 @@ export default function ExploreClient({
                 {filter.label}
               </button>
             ))}
+
+            {isLoggedIn && (
+              <button
+                type="button"
+                className={
+                  activeFilter === "favorite"
+                    ? "filter-chip favorite active"
+                    : "filter-chip favorite"
+                }
+                onClick={() => setActiveFilter("favorite")}
+              >
+                <span aria-hidden="true">★</span>
+                관심
+              </button>
+            )}
           </div>
         </div>
       </section>
@@ -184,11 +213,17 @@ export default function ExploreClient({
             </div>
           ) : (
             <div className="explore-empty">
-              <span>✦</span>
+              <span>{activeFilter === "favorite" ? "☆" : "✦"}</span>
 
-              <h2>검색 결과가 없습니다</h2>
+              <h2>
+                {activeFilter === "favorite" ? "관심 천체가 없습니다" : "검색 결과가 없습니다"}
+              </h2>
 
-              <p>다른 이름이나 분류로 검색해보세요.</p>
+              <p>
+                {activeFilter === "favorite"
+                  ? "천체 상세 페이지에서 관심 천체를 추가해보세요."
+                  : "다른 이름이나 분류로 검색해보세요."}
+              </p>
             </div>
           )}
 

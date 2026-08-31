@@ -1617,6 +1617,33 @@ img {
 }
 
 /* ========================================
+   EXPLORE FAVORITE FILTER
+======================================== */
+
+.filter-chip.favorite {
+  display: inline-flex;
+  align-items: center;
+
+  gap: 5px;
+}
+
+.filter-chip.favorite > span {
+  color: var(--text-muted);
+
+  font-size: 12px;
+
+  transition: color 0.2s ease;
+}
+
+.filter-chip.favorite:hover > span {
+  color: var(--primary);
+}
+
+.filter-chip.favorite.active > span {
+  color: var(--primary);
+}
+
+/* ========================================
    EXPLORE - TABLET
 ======================================== */
 
