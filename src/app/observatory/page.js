@@ -28,18 +28,18 @@ export default async function ObservatoryPage() {
   const supabase = await createClient();
 
   /*
-   * 프로필 / 관측 기록 / 관심 천체를
-   * 서로 독립적으로 동시에 조회.
+   * 프로필 / 관측 기록 / 관심 천체 / 전체 천체를
+   * 서로 독립적으로 동시에 조회한다.
    */
   const [profileResult, observationsResult, favoritesResult, objectsResult] = await Promise.all([
     supabase
       .from("profiles")
       .select(
         `
-          nickname,
-          avatar_url,
-          created_at
-        `,
+        nickname,
+        avatar_url,
+        created_at
+      `,
       )
       .eq("user_id", user.id)
       .maybeSingle(),
@@ -48,31 +48,31 @@ export default async function ObservatoryPage() {
       .from("observations")
       .select(
         `
+        id,
+        celestial_object_id,
+        observed_at,
+        location_name,
+        equipment,
+        rating,
+        duration_minutes,
+        note,
+
+        celestial_objects (
           id,
-          celestial_object_id,
-          observed_at,
-          location_name,
-          equipment,
-          rating,
-          duration_minutes,
-          note,
+          catalog_name,
+          name_en,
+          name_ko,
+          type,
+          image_url,
+          external_id
+        ),
 
-          celestial_objects (
-            id,
-            catalog_name,
-            name_en,
-            name_ko,
-            type,
-            image_url,
-            external_id
-          ),
-
-          observation_images (
-            id,
-            image_url,
-            sort_order
-          )
-        `,
+        observation_images (
+          id,
+          image_url,
+          sort_order
+        )
+      `,
       )
       .eq("user_id", user.id)
       .order("observed_at", {
@@ -83,20 +83,20 @@ export default async function ObservatoryPage() {
       .from("favorites")
       .select(
         `
-          id,
-          celestial_object_id,
-          created_at,
+        id,
+        celestial_object_id,
+        created_at,
 
-          celestial_objects (
-            id,
-            catalog_name,
-            name_en,
-            name_ko,
-            type,
-            image_url,
-            external_id
-          )
-        `,
+        celestial_objects (
+          id,
+          catalog_name,
+          name_en,
+          name_ko,
+          type,
+          image_url,
+          external_id
+        )
+      `,
       )
       .eq("user_id", user.id)
       .order("created_at", {
@@ -105,6 +105,12 @@ export default async function ObservatoryPage() {
 
     supabase.from("celestial_objects").select("id"),
   ]);
+
+  /*
+   * =========================
+   * ERROR CHECK
+   * =========================
+   */
 
   if (profileResult.error) {
     console.error("Observatory 프로필 조회 오류:", profileResult.error);
@@ -122,6 +128,12 @@ export default async function ObservatoryPage() {
     console.error("Observatory 전체 천체 조회 오류:", objectsResult.error);
   }
 
+  /*
+   * =========================
+   * DATA
+   * =========================
+   */
+
   const profile = profileResult.data;
 
   const observations = observationsResult.data || [];
@@ -138,6 +150,7 @@ export default async function ObservatoryPage() {
 
   const avatarUrl = await resolveProfileAvatar({
     supabase,
+
     avatarUrl: profile?.avatar_url,
   });
 
@@ -149,6 +162,10 @@ export default async function ObservatoryPage() {
 
   const totalObservations = observations.length;
 
+  /*
+   * 같은 천체를 여러 번 관측하더라도
+   * 고유 천체 수는 1개로 계산.
+   */
   const observedObjectIds = new Set(
     observations.map(observation => observation.celestial_object_id),
   );
@@ -158,21 +175,28 @@ export default async function ObservatoryPage() {
   const favoriteCount = favorites.length;
 
   const totalMinutes = observations.reduce(
-    (sum, observation) => sum + (observation.duration_minutes || 0),
+    (total, observation) => total + (observation.duration_minutes || 0),
     0,
   );
 
-  const averageRating = observations.length
-    ? observations.reduce((sum, observation) => sum + (observation.rating || 0), 0) /
-      observations.length
+  const ratingObservations = observations.filter(observation => observation.rating);
+
+  const averageRating = ratingObservations.length
+    ? ratingObservations.reduce((total, observation) => total + observation.rating, 0) /
+      ratingObservations.length
     : 0;
 
-  const collectionProgress = totalObjects ? Math.round((observedObjects / totalObjects) * 100) : 0;
+  const collectionProgress =
+    totalObjects > 0 ? Math.round((observedObjects / totalObjects) * 100) : 0;
 
   /*
-   * 최근 관측 3개.
-   * 관측 사진이 있으면 signed URL 생성.
+   * =========================
+   * RECENT OBSERVATIONS
+   * =========================
+   *
+   * 최근 3개 기록만 My Observatory에 표시.
    */
+
   const recentObservations = await Promise.all(
     observations.slice(0, 3).map(async observation => {
       const images = [...(observation.observation_images || [])].sort(
@@ -183,6 +207,10 @@ export default async function ObservatoryPage() {
 
       let observationImage = null;
 
+      /*
+       * 관측 사진은 private bucket이므로
+       * signed URL을 생성한다.
+       */
       if (representative?.image_url) {
         const { data, error } = await supabase.storage
           .from("observation-images")
@@ -203,6 +231,8 @@ export default async function ObservatoryPage() {
     }),
   );
 
+  const nickname = profile?.nickname || getEmailNickname(user.email);
+
   return (
     <main className="observatory-page">
       {/* =========================
@@ -212,14 +242,16 @@ export default async function ObservatoryPage() {
       <section className="container observatory-profile-section">
         <ObservatoryProfileForm
           userId={user.id}
-          initialNickname={profile?.nickname || getEmailNickname(user.email)}
+          initialNickname={nickname}
           initialAvatarUrl={avatarUrl}
         />
 
-        <div className="observatory-account-meta">
+        <div className="observatory-profile-subinfo">
           <span>{user.email}</span>
 
           {profile?.created_at && <span>Joined {formatJoinedDate(profile.created_at)}</span>}
+
+          <span>{observedObjects}개의 천체 관측</span>
         </div>
       </section>
 
@@ -251,10 +283,14 @@ export default async function ObservatoryPage() {
 
           <StatCard
             label="AVERAGE RATING"
-            value={observations.length ? averageRating.toFixed(1) : "-"}
-            unit={observations.length ? "/ 5" : ""}
+            value={ratingObservations.length ? averageRating.toFixed(1) : "-"}
+            unit={ratingObservations.length ? "/ 5" : ""}
           />
         </div>
+
+        {/* =========================
+            COLLECTION PROGRESS
+        ========================= */}
 
         <div className="observatory-progress-card">
           <div className="observatory-progress-heading">
@@ -285,69 +321,75 @@ export default async function ObservatoryPage() {
       </section>
 
       {/* =========================
-          RECENT OBSERVATIONS
+          LIBRARY
       ========================= */}
 
-      <section className="container observatory-section">
-        <div className="observatory-section-header">
-          <div>
-            <span className="section-label">RECENT OBSERVATIONS</span>
+      <section className="container observatory-library-section">
+        {/* =========================
+            RECENT OBSERVATIONS
+        ========================= */}
 
-            <h2 className="heading-ko">최근 관측 기록</h2>
+        <div className="observatory-library-column">
+          <div className="observatory-library-heading">
+            <div>
+              <span className="section-label">RECENT OBSERVATIONS</span>
+
+              <h2 className="heading-ko">최근 관측 기록</h2>
+            </div>
+
+            <Link href="/observations" className="section-link">
+              전체 보기 →
+            </Link>
           </div>
 
-          <Link href="/observations" className="section-link">
-            전체 기록 보기 →
-          </Link>
+          {recentObservations.length ? (
+            <div className="observatory-compact-list">
+              {recentObservations.map(observation => (
+                <RecentObservationItem key={observation.id} observation={observation} />
+              ))}
+            </div>
+          ) : (
+            <EmptyCard
+              title="아직 관측 기록이 없습니다."
+              description="첫 번째 밤하늘 관측을 기록해보세요."
+              href="/observations/new"
+              action="관측 기록하기"
+            />
+          )}
         </div>
 
-        {recentObservations.length ? (
-          <div className="observatory-recent-grid">
-            {recentObservations.map(observation => (
-              <RecentObservationCard key={observation.id} observation={observation} />
-            ))}
-          </div>
-        ) : (
-          <EmptyCard
-            title="아직 관측 기록이 없습니다."
-            description="첫 번째 밤하늘 관측을 기록해보세요."
-            href="/observations/new"
-            action="관측 기록하기"
-          />
-        )}
-      </section>
+        {/* =========================
+            FAVORITES
+        ========================= */}
 
-      {/* =========================
-          FAVORITES
-      ========================= */}
+        <div className="observatory-library-column">
+          <div className="observatory-library-heading">
+            <div>
+              <span className="section-label">FAVORITE OBJECTS</span>
 
-      <section className="container observatory-section observatory-favorite-section">
-        <div className="observatory-section-header">
-          <div>
-            <span className="section-label">FAVORITE OBJECTS</span>
+              <h2 className="heading-ko">관심 천체</h2>
+            </div>
 
-            <h2 className="heading-ko">관심 천체</h2>
+            <Link href="/explore" className="section-link">
+              탐색하기 →
+            </Link>
           </div>
 
-          <Link href="/explore" className="section-link">
-            천체 탐색하기 →
-          </Link>
+          {favorites.length ? (
+            <div className="observatory-compact-list">
+              {favorites.slice(0, 4).map(favorite => (
+                <FavoriteObjectItem key={favorite.id} object={favorite.celestial_objects} />
+              ))}
+            </div>
+          ) : (
+            <EmptyCard
+              title="아직 관심 천체가 없습니다."
+              description="관심 있는 천체를 저장하고 다음 관측 대상을 모아보세요."
+              href="/explore"
+              action="Explore 열기"
+            />
+          )}
         </div>
-
-        {favorites.length ? (
-          <div className="observatory-favorite-grid">
-            {favorites.slice(0, 4).map(favorite => (
-              <FavoriteObjectCard key={favorite.id} object={favorite.celestial_objects} />
-            ))}
-          </div>
-        ) : (
-          <EmptyCard
-            title="아직 관심 천체가 없습니다."
-            description="관심 있는 천체를 저장하고 다음 관측 대상을 모아보세요."
-            href="/explore"
-            action="Explore 열기"
-          />
-        )}
       </section>
     </main>
   );
@@ -372,69 +414,67 @@ function StatCard({ label, value, unit }) {
 }
 
 /* ========================================
-   RECENT OBSERVATION CARD
+   RECENT OBSERVATION ITEM
 ======================================== */
 
-function RecentObservationCard({ observation }) {
+function RecentObservationItem({ observation }) {
   const object = observation.celestial_objects;
 
   return (
-    <Link href={`/observations/${observation.id}`} className="observatory-recent-card">
-      <div className="observatory-recent-image">
+    <Link href={`/observations/${observation.id}`} className="observatory-compact-item">
+      <div className="observatory-compact-image">
         <img src={observation.thumbnail} alt={object?.name_ko || object?.name_en || "관측 천체"} />
       </div>
 
-      <div className="observatory-recent-content">
-        <span>{formatObservationDate(observation.observed_at)}</span>
+      <div className="observatory-compact-content">
+        <strong className="display-en">{getObjectName(object)}</strong>
 
-        <h3 className="display-en">{getObjectName(object)}</h3>
+        <span>{object?.name_ko}</span>
 
-        <p>{object?.name_ko}</p>
+        <div className="observatory-compact-meta">
+          {observation.location_name && <span>{observation.location_name}</span>}
 
-        <div className="observatory-recent-meta">
-          <span>{observation.location_name}</span>
-
-          <span>{EQUIPMENT_LABELS[observation.equipment] || observation.equipment}</span>
-        </div>
-
-        <div className="observatory-recent-rating">
-          {"★".repeat(observation.rating || 0)}
-
-          {"☆".repeat(5 - (observation.rating || 0))}
+          {observation.equipment && (
+            <span>{EQUIPMENT_LABELS[observation.equipment] || observation.equipment}</span>
+          )}
         </div>
       </div>
+
+      <time dateTime={observation.observed_at}>{formatCompactDate(observation.observed_at)}</time>
     </Link>
   );
 }
 
 /* ========================================
-   FAVORITE OBJECT
+   FAVORITE OBJECT ITEM
 ======================================== */
 
-function FavoriteObjectCard({ object }) {
+function FavoriteObjectItem({ object }) {
   if (!object) {
     return null;
   }
 
   return (
-    <Link href={`/objects/${object.id}`} className="observatory-favorite-card">
-      <div className="observatory-favorite-image">
+    <Link href={`/objects/${object.id}`} className="observatory-compact-item">
+      <div className="observatory-compact-image">
         <img src={getObjectImage(object)} alt={object.name_ko || object.name_en} />
-
-        <span>★</span>
       </div>
 
-      <div className="observatory-favorite-content">
+      <div className="observatory-compact-content">
         <strong className="display-en">{getObjectName(object)}</strong>
 
         <span>{object.name_ko}</span>
       </div>
+
+      <span className="observatory-compact-favorite" aria-label="관심 천체">
+        ★
+      </span>
     </Link>
   );
 }
 
 /* ========================================
-   EMPTY
+   EMPTY CARD
 ======================================== */
 
 function EmptyCard({ title, description, href, action }) {
@@ -456,7 +496,7 @@ function EmptyCard({ title, description, href, action }) {
 }
 
 /* ========================================
-   HELPERS
+   PROFILE AVATAR
 ======================================== */
 
 async function resolveProfileAvatar({ supabase, avatarUrl }) {
@@ -465,15 +505,17 @@ async function resolveProfileAvatar({ supabase, avatarUrl }) {
   }
 
   /*
-   * Google OAuth처럼 외부 URL이면 그대로 사용.
+   * Google OAuth 프로필 이미지처럼
+   * 외부 URL이면 그대로 사용.
    */
   if (avatarUrl.startsWith("http://") || avatarUrl.startsWith("https://")) {
     return avatarUrl;
   }
 
   /*
-   * profile-images Storage 경로라면
-   * private bucket이므로 signed URL 생성.
+   * 직접 업로드한 이미지는
+   * private profile-images bucket에 있으므로
+   * signed URL 생성.
    */
   const { data, error } = await supabase.storage
     .from("profile-images")
@@ -488,6 +530,10 @@ async function resolveProfileAvatar({ supabase, avatarUrl }) {
   return data?.signedUrl || "";
 }
 
+/* ========================================
+   HELPERS
+======================================== */
+
 function getObjectImage(object) {
   return object?.image_url || FALLBACK_IMAGES[object?.external_id] || "/images/home/hero.png";
 }
@@ -500,12 +546,18 @@ function getObjectName(object) {
   return object.catalog_name || object.name_en || object.name_ko || "Unknown";
 }
 
-function formatObservationDate(value) {
-  return new Intl.DateTimeFormat("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(new Date(value));
+function formatCompactDate(value) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${month}.${day}`;
 }
 
 function formatJoinedDate(value) {
