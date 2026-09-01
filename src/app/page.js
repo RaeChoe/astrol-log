@@ -14,6 +14,10 @@ import { getWeeklyAstronomyEvents, formatAstronomyEventDate } from "@/lib/astron
 
 import { getCelestialThumbnail } from "@/lib/celestial/images";
 
+/* ========================================
+   RATING
+======================================== */
+
 function Rating({ value }) {
   return (
     <div className="highlight-rating" aria-label={`관측 추천 ${value}점`}>
@@ -27,6 +31,10 @@ function Rating({ value }) {
     </div>
   );
 }
+
+/* ========================================
+   HOME
+======================================== */
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -99,6 +107,8 @@ export default async function HomePage() {
   const mainEvent = weeklyEvents[0] || null;
 
   const secondaryEvents = weeklyEvents.slice(1, 3);
+
+  const moreEvents = weeklyEvents.slice(3);
 
   const mainEventImage = getEventVisualImage(mainEvent);
 
@@ -298,7 +308,13 @@ export default async function HomePage() {
 
           {mainEvent ? (
             <>
-              <article className="event-card">
+              {/* MAIN EVENT */}
+
+              <article
+                className={
+                  isRareAstronomyEvent(mainEvent) ? "event-card event-card-rare" : "event-card"
+                }
+              >
                 <div
                   className="event-visual"
                   style={{
@@ -317,7 +333,19 @@ export default async function HomePage() {
                       })}
                     </span>
 
-                    {mainEvent.badge && <span className="event-badge">{mainEvent.badge}</span>}
+                    {mainEvent.badge && (
+                      <span
+                        className={
+                          isRareAstronomyEvent(mainEvent) ? "event-badge rare" : "event-badge"
+                        }
+                      >
+                        <span className="event-badge-icon" aria-hidden="true">
+                          {getEventIcon(mainEvent)}
+                        </span>
+
+                        {mainEvent.badge}
+                      </span>
+                    )}
                   </div>
 
                   <h3 className="heading-ko">{mainEvent.titleKo}</h3>
@@ -328,27 +356,42 @@ export default async function HomePage() {
                 </div>
               </article>
 
+              {/* SECONDARY EVENTS */}
+
               {secondaryEvents.length > 0 && (
                 <div className="event-secondary-list">
                   {secondaryEvents.map(event => (
-                    <article
+                    <EventSecondaryCard
                       key={`${event.type}-${event.date.toISOString()}`}
-                      className="event-secondary-item"
-                    >
-                      <div>
-                        <span className="event-secondary-date">
-                          {formatAstronomyEventDate(event.date, {
-                            approximate: event.approximate,
-                          })}
-                        </span>
-
-                        <strong className="heading-ko">{event.titleKo}</strong>
-                      </div>
-
-                      <span className="event-secondary-name">{event.titleEn}</span>
-                    </article>
+                      event={event}
+                    />
                   ))}
                 </div>
+              )}
+
+              {/* MORE EVENTS */}
+
+              {moreEvents.length > 0 && (
+                <details className="event-more">
+                  <summary className="event-more-summary">
+                    <span>이번 주 이벤트 더 보기</span>
+
+                    <span className="event-more-count">+{moreEvents.length}</span>
+
+                    <span className="event-more-arrow" aria-hidden="true">
+                      ↓
+                    </span>
+                  </summary>
+
+                  <div className="event-more-list">
+                    {moreEvents.map(event => (
+                      <EventSecondaryCard
+                        key={`${event.type}-${event.date.toISOString()}`}
+                        event={event}
+                      />
+                    ))}
+                  </div>
+                </details>
               )}
             </>
           ) : (
@@ -381,6 +424,91 @@ export default async function HomePage() {
       </section>
     </main>
   );
+}
+
+/* ========================================
+   SECONDARY EVENT CARD
+======================================== */
+
+function EventSecondaryCard({ event }) {
+  const isRare = isRareAstronomyEvent(event);
+
+  return (
+    <article className={isRare ? "event-secondary-item rare" : "event-secondary-item"}>
+      <div className="event-secondary-main">
+        <div className="event-secondary-meta">
+          <span className="event-secondary-date">
+            {formatAstronomyEventDate(event.date, {
+              approximate: event.approximate,
+            })}
+          </span>
+
+          {event.badge && (
+            <span className={isRare ? "event-mini-badge rare" : "event-mini-badge"}>
+              <span aria-hidden="true" className="event-mini-badge-icon">
+                {getEventIcon(event)}
+              </span>
+
+              {event.badge}
+            </span>
+          )}
+        </div>
+
+        <strong className="heading-ko">{event.titleKo}</strong>
+      </div>
+
+      <span className="event-secondary-name">{event.titleEn}</span>
+    </article>
+  );
+}
+
+/* ========================================
+   RARE EVENT
+======================================== */
+
+function isRareAstronomyEvent(event) {
+  return ["solar-eclipse", "lunar-eclipse", "meteor-shower", "transit"].includes(event?.type);
+}
+
+/* ========================================
+   EVENT ICON
+======================================== */
+
+function getEventIcon(event) {
+  switch (event?.type) {
+    case "solar-eclipse":
+      return "◉";
+
+    case "lunar-eclipse":
+      return "◐";
+
+    case "meteor-shower":
+      return "✦";
+
+    case "transit":
+      return "⊙";
+
+    case "opposition":
+      return "◎";
+
+    case "elongation":
+      return "◇";
+
+    case "peak-magnitude":
+      return "✧";
+
+    case "lunar-apsis":
+      return "○";
+
+    case "moon-phase":
+      return "◐";
+
+    case "season":
+      return "☼";
+
+    default:
+      return "✦";
+  }
 }
 
 /* ========================================
