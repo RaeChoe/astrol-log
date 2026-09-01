@@ -839,10 +839,13 @@ img {
   margin: 0 0 32px;
 
   font-family: var(--font-noto-serif-kr), serif;
-
   font-size: clamp(36px, 4vw, 52px);
   font-weight: 500;
 }
+
+/* ========================================
+   MAIN EVENT CARD
+======================================== */
 
 .event-card {
   position: relative;
@@ -860,7 +863,52 @@ img {
   background: var(--surface);
 }
 
-/* Event content */
+/* ========================================
+   EVENT IMAGE
+======================================== */
+
+/*
+ * 실제 background-image는 page.js에서
+ * mainEvent.visualKey에 따라 inline style로 들어감.
+ */
+.event-visual {
+  position: absolute;
+
+  inset: 0 0 0 42%;
+
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+/*
+ * 기존 mock 디자인처럼
+ * 왼쪽 surface와 이미지가 자연스럽게 이어지는
+ * 단순한 가로 그라데이션.
+ */
+.event-card-overlay {
+  position: absolute;
+  inset: 0;
+
+  z-index: 1;
+
+  background: linear-gradient(
+    90deg,
+    #101521 0%,
+    #101521 34%,
+    rgba(16, 21, 33, 0.92) 43%,
+    rgba(16, 21, 33, 0.62) 52%,
+    rgba(16, 21, 33, 0.28) 64%,
+    rgba(16, 21, 33, 0.08) 76%,
+    rgba(16, 21, 33, 0) 100%
+  );
+
+  pointer-events: none;
+}
+
+/* ========================================
+   EVENT CONTENT
+======================================== */
 
 .event-content {
   position: relative;
@@ -871,10 +919,40 @@ img {
   padding: 38px 42px;
 }
 
+.event-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  gap: 8px;
+}
+
 .event-date {
   color: var(--primary);
 
   font-size: 12px;
+  font-weight: 600;
+}
+
+.event-badge {
+  display: inline-flex;
+  align-items: center;
+
+  width: fit-content;
+
+  padding: 4px 9px;
+
+  border: 1px solid rgba(167, 139, 250, 0.35);
+  border-radius: 999px;
+
+  color: var(--primary);
+
+  font-size: 10px;
+  font-weight: 600;
+
+  line-height: 1;
+
+  letter-spacing: 0.08em;
 }
 
 .event-content h3 {
@@ -905,19 +983,175 @@ img {
   line-height: 1.8;
 }
 
-/* Event image */
+/* ========================================
+   SECONDARY EVENTS
+======================================== */
 
-.event-visual {
-  position: absolute;
+.event-secondary-list {
+  display: grid;
 
-  inset: 0 0 0 45%;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
-  background:
-    linear-gradient(90deg, #101521 0%, rgba(16, 21, 33, 0.25) 45%, rgba(16, 21, 33, 0.05) 100%),
-    url("/images/home/saturn-event.png");
+  gap: 12px;
 
-  background-position: center;
-  background-size: cover;
+  margin-top: 14px;
+}
+
+.event-secondary-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  min-width: 0;
+
+  padding: 18px 20px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface);
+}
+
+.event-secondary-item > div {
+  display: flex;
+  flex-direction: column;
+
+  gap: 5px;
+
+  min-width: 0;
+}
+
+.event-secondary-date {
+  color: var(--primary);
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.event-secondary-item strong {
+  color: var(--text-primary);
+
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.event-secondary-name {
+  flex-shrink: 0;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+
+  letter-spacing: 0.06em;
+}
+
+/* ========================================
+   TABLET
+======================================== */
+
+@media (max-width: 900px) {
+  .event-content {
+    width: 65%;
+
+    padding: 34px 32px;
+  }
+
+  .event-visual {
+    inset: 0 0 0 36%;
+  }
+
+  .event-card-overlay {
+    background: linear-gradient(
+      90deg,
+      #101521 0%,
+      #101521 38%,
+      rgba(16, 21, 33, 0.9) 48%,
+      rgba(16, 21, 33, 0.52) 63%,
+      rgba(16, 21, 33, 0.08) 84%,
+      rgba(16, 21, 33, 0) 100%
+    );
+  }
+}
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .event-section {
+    padding-bottom: 80px;
+  }
+
+  .event-section-title {
+    margin-bottom: 24px;
+
+    font-size: 34px;
+  }
+
+  .event-card {
+    align-items: flex-end;
+
+    min-height: 390px;
+  }
+
+  /*
+   * 모바일에서는 이미지를 카드 전체에 깔고
+   * 아래쪽 텍스트 영역으로 자연스럽게 어두워짐.
+   */
+  .event-visual {
+    inset: 0;
+
+    background-position: center;
+    background-size: cover;
+  }
+
+  .event-card-overlay {
+    background: linear-gradient(
+      0deg,
+      #101521 0%,
+      #101521 24%,
+      rgba(16, 21, 33, 0.92) 38%,
+      rgba(16, 21, 33, 0.62) 58%,
+      rgba(16, 21, 33, 0.18) 82%,
+      rgba(16, 21, 33, 0.04) 100%
+    );
+  }
+
+  .event-content {
+    width: 100%;
+
+    padding: 28px;
+  }
+
+  .event-content h3 {
+    margin-top: 16px;
+
+    font-size: 26px;
+  }
+
+  .event-content p {
+    margin-top: 14px;
+
+    font-size: 12px;
+    line-height: 1.7;
+  }
+
+  .event-secondary-list {
+    grid-template-columns: 1fr;
+  }
+
+  .event-secondary-item {
+    align-items: flex-start;
+    flex-direction: column;
+
+    gap: 8px;
+  }
+
+  .event-secondary-name {
+    white-space: normal;
+  }
 }
 
 /* ========================================
@@ -1053,33 +1287,6 @@ img {
 
   .highlight-image-wrapper {
     height: 260px;
-  }
-
-  /* Event */
-
-  .event-card {
-    align-items: flex-end;
-
-    min-height: 390px;
-  }
-
-  .event-content {
-    width: 100%;
-
-    padding: 28px;
-  }
-
-  .event-visual {
-    inset: 0;
-
-    opacity: 0.52;
-
-    background:
-      linear-gradient(0deg, #101521 5%, rgba(16, 21, 33, 0.35) 70%),
-      url("/images/home/saturn-event.png");
-
-    background-position: center;
-    background-size: cover;
   }
 }
 

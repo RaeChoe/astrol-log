@@ -8,6 +8,8 @@ import { getTodaySkyData } from "@/lib/astronomy/today";
 
 import { getTonightHighlights } from "@/lib/astronomy/highlights";
 
+import { getWeeklyAstronomyEvents, formatAstronomyEventDate } from "@/lib/astronomy/events";
+
 import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 function Rating({ value }) {
@@ -27,33 +29,21 @@ function Rating({ value }) {
 export default async function HomePage() {
   const supabase = await createClient();
 
-  /*
-   * =========================
-   * CURRENT LOCATION
-   * =========================
-   *
-   * 위치 권한 허용:
-   * → 브라우저 geolocation 좌표
-   *
-   * 위치가 없거나 거부:
-   * → 서울 fallback
-   */
+  /* ========================================
+     CURRENT LOCATION
+  ======================================== */
 
   const location = await getObserverLocation();
 
-  /*
-   * =========================
-   * TODAY SKY
-   * =========================
-   */
+  /* ========================================
+     TODAY SKY
+  ======================================== */
 
   const sky = await getTodaySkyData(location);
 
-  /*
-   * =========================
-   * ALL CELESTIAL OBJECTS
-   * =========================
-   */
+  /* ========================================
+     CELESTIAL OBJECTS
+  ======================================== */
 
   const { data: objects, error } = await supabase
     .from("celestial_objects")
@@ -74,14 +64,9 @@ export default async function HomePage() {
       ascending: true,
     });
 
-  /*
-   * =========================
-   * TONIGHT'S HIGHLIGHTS
-   * =========================
-   *
-   * 이제 서울 고정이 아니라
-   * 현재 사용자 위치 기준.
-   */
+  /* ========================================
+     TONIGHT'S HIGHLIGHTS
+  ======================================== */
 
   const highlights = error
     ? []
@@ -95,11 +80,29 @@ export default async function HomePage() {
         moonIllumination: sky.moonIllumination,
       });
 
-  /*
-   * =========================
-   * SKY SUMMARY
-   * =========================
-   */
+  /* ========================================
+     WEEKLY EVENTS
+  ======================================== */
+
+  const weeklyEvents = getWeeklyAstronomyEvents({
+    now: new Date(),
+
+    latitude: location.latitude,
+
+    longitude: location.longitude,
+
+    rangeDays: 7,
+  });
+
+  const mainEvent = weeklyEvents[0] || null;
+
+  const secondaryEvents = weeklyEvents.slice(1, 3);
+
+  const mainEventImage = getEventVisualImage(mainEvent);
+
+  /* ========================================
+     SKY SUMMARY
+  ======================================== */
 
   const observationInfo = [
     {
@@ -157,9 +160,9 @@ export default async function HomePage() {
 
   return (
     <main className="today-page">
-      {/* =========================
+      {/* ========================================
           HERO
-      ========================= */}
+      ======================================== */}
 
       <section className="today-hero">
         <div className="today-hero-overlay" />
@@ -197,9 +200,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
+      {/* ========================================
           SKY SUMMARY
-      ========================= */}
+      ======================================== */}
 
       <section className="sky-summary-section">
         <div className="container">
@@ -219,9 +222,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
+      {/* ========================================
           HIGHLIGHTS
-      ========================= */}
+      ======================================== */}
 
       <section className="today-section">
         <div className="container">
@@ -279,9 +282,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* =========================
-          WEEKLY EVENT
-      ========================= */}
+      {/* ========================================
+          WEEKLY EVENTS
+      ======================================== */}
 
       <section className="today-section event-section">
         <div className="container">
@@ -289,28 +292,117 @@ export default async function HomePage() {
 
           <h2 className="heading-ko event-section-title">주요 천문 이벤트</h2>
 
-          {/*
-           * 아직 남아 있는 mock.
-           * 다음 단계에서 실제화 예정.
-           */}
-          <article className="event-card">
-            <div className="event-content">
-              <span className="event-date">8월 28일 · 04:00</span>
+          {mainEvent ? (
+            <>
+              <article className="event-card">
+                <div
+                  className="event-visual"
+                  style={{
+                    backgroundImage: `url("${mainEventImage}")`,
+                  }}
+                  aria-hidden="true"
+                />
 
-              <h3 className="heading-ko">토성 충</h3>
+                <div className="event-card-overlay" />
 
-              <span className="event-name">SATURN OPPOSITION</span>
+                <div className="event-content">
+                  <div className="event-meta">
+                    <span className="event-date">
+                      {formatAstronomyEventDate(mainEvent.date, {
+                        approximate: mainEvent.approximate,
+                      })}
+                    </span>
 
-              <p>
-                토성이 지구와 가장 가까워지는 시기입니다. 망원경 없이도 고리가 선명하게 관측되는
-                시기예요.
-              </p>
-            </div>
+                    {mainEvent.badge && <span className="event-badge">{mainEvent.badge}</span>}
+                  </div>
 
-            <div className="event-visual" aria-hidden="true" />
-          </article>
+                  <h3 className="heading-ko">{mainEvent.titleKo}</h3>
+
+                  <span className="event-name">{mainEvent.titleEn}</span>
+
+                  <p>{mainEvent.description}</p>
+                </div>
+              </article>
+
+              {secondaryEvents.length > 0 && (
+                <div className="event-secondary-list">
+                  {secondaryEvents.map(event => (
+                    <article
+                      key={`${event.type}-${event.date.toISOString()}`}
+                      className="event-secondary-item"
+                    >
+                      <div>
+                        <span className="event-secondary-date">
+                          {formatAstronomyEventDate(event.date, {
+                            approximate: event.approximate,
+                          })}
+                        </span>
+
+                        <strong className="heading-ko">{event.titleKo}</strong>
+                      </div>
+
+                      <span className="event-secondary-name">{event.titleEn}</span>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </>
+          ) : (
+            <article className="event-card event-card-empty">
+              <div
+                className="event-visual"
+                style={{
+                  backgroundImage: 'url("/images/home/hero.png")',
+                }}
+                aria-hidden="true"
+              />
+
+              <div className="event-card-overlay" />
+
+              <div className="event-content">
+                <span className="event-date">앞으로 7일</span>
+
+                <h3 className="heading-ko">예정된 주요 이벤트 없음</h3>
+
+                <span className="event-name">QUIET SKY WEEK</span>
+
+                <p>
+                  앞으로 7일 이내에 등록된 주요 천문 이벤트가 없습니다. Tonight&apos;s
+                  Highlights에서 오늘 관측하기 좋은 천체를 확인해보세요.
+                </p>
+              </div>
+            </article>
+          )}
         </div>
       </section>
     </main>
   );
+}
+
+/* ========================================
+   EVENT VISUAL
+======================================== */
+
+function getEventVisualImage(event) {
+  if (!event) {
+    return "/images/home/hero.png";
+  }
+
+  /*
+   * 유성우 / 절기처럼
+   * 하나의 천체로 표현하기 어려운 이벤트.
+   */
+  if (event.visualKey === "night-sky") {
+    return "/images/home/hero.png";
+  }
+
+  /*
+   * 달과 행성은 이미 가지고 있는
+   * 고해상도 detail 이미지 사용.
+   */
+  if (event.visualKey) {
+    return `/images/celestial/detail/${event.visualKey}.webp`;
+  }
+
+  return "/images/home/hero.png";
 }
