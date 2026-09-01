@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 import ObservatoryProfileForm from "@/components/observatory/ObservatoryProfileForm";
+import SafeImage from "@/components/common/SafeImage";
 
 export const metadata = {
   title: "My Observatory | AstroLog",
@@ -138,6 +139,14 @@ export default async function ObservatoryPage() {
     console.error("Observatory 전체 천체 조회 오류:", objectsResult.error);
   }
 
+  const profileLoadError = Boolean(profileResult.error);
+
+  const observationsLoadError = Boolean(observationsResult.error);
+
+  const favoritesLoadError = Boolean(favoritesResult.error);
+
+  const objectsLoadError = Boolean(objectsResult.error);
+
   /*
    * =========================
    * DATA
@@ -160,6 +169,7 @@ export default async function ObservatoryPage() {
 
   const avatarUrl = await resolveProfileAvatar({
     supabase,
+
     avatarUrl: profile?.avatar_url,
   });
 
@@ -209,6 +219,7 @@ export default async function ObservatoryPage() {
   const currentYear = Number(
     new Intl.DateTimeFormat("en-US", {
       year: "numeric",
+
       timeZone: "Asia/Seoul",
     }).format(now),
   );
@@ -217,17 +228,24 @@ export default async function ObservatoryPage() {
     Number(
       new Intl.DateTimeFormat("en-US", {
         month: "numeric",
+
         timeZone: "Asia/Seoul",
       }).format(now),
     ) - 1;
 
   const monthlyObservations = createMonthlyStatistics({
     observations,
+
     year: currentYear,
+
     lastMonth: currentMonth,
   });
 
-  const maxMonthlyCount = Math.max(...monthlyObservations.map(month => month.count), 4);
+  const maxMonthlyCount = Math.max(
+    ...monthlyObservations.map(month => month.count),
+
+    4,
+  );
 
   const busiestMonth = [...monthlyObservations].sort((a, b) => b.count - a.count)[0];
 
@@ -252,9 +270,11 @@ export default async function ObservatoryPage() {
        * private bucket이므로 signed URL 생성.
        */
       if (representative?.image_url) {
-        const { data, error } = await supabase.storage
-          .from("observation-images")
-          .createSignedUrl(representative.image_url, 60 * 60);
+        const { data, error } = await supabase.storage.from("observation-images").createSignedUrl(
+          representative.image_url,
+
+          60 * 60,
+        );
 
         if (error) {
           console.error("Observatory 관측 사진 URL 오류:", error);
@@ -293,8 +313,39 @@ export default async function ObservatoryPage() {
 
           {profile?.created_at && <span>Joined {formatJoinedDate(profile.created_at)}</span>}
 
-          <span>{observedObjects}개의 천체 관측</span>
+          <span>
+            {observedObjects}
+            개의 천체 관측
+          </span>
         </div>
+
+        {(profileLoadError || observationsLoadError || favoritesLoadError || objectsLoadError) && (
+          <div className="observatory-data-warnings" role="status">
+            {profileLoadError && (
+              <p className="data-inline-warning">
+                프로필 일부 정보를 불러오지 못해 기본 정보로 표시하고 있습니다.
+              </p>
+            )}
+
+            {observationsLoadError && (
+              <p className="data-inline-warning">
+                관측 기록을 불러오지 못해 관측 통계와 최근 기록이 정확하지 않을 수 있습니다.
+              </p>
+            )}
+
+            {favoritesLoadError && (
+              <p className="data-inline-warning">
+                관심 천체를 불러오지 못했습니다. 잠시 후 다시 확인해주세요.
+              </p>
+            )}
+
+            {objectsLoadError && (
+              <p className="data-inline-warning">
+                전체 천체 수를 불러오지 못해 도감 진행률이 정확하지 않을 수 있습니다.
+              </p>
+            )}
+          </div>
+        )}
       </section>
 
       {/* STATISTICS */}
@@ -351,7 +402,10 @@ export default async function ObservatoryPage() {
           </div>
 
           <div className="observatory-progress-footer">
-            <span>{observedObjects}개의 천체를 관측했습니다.</span>
+            <span>
+              {observedObjects}
+              개의 천체를 관측했습니다.
+            </span>
 
             <Link href="/collection">도감 보기 →</Link>
           </div>
@@ -396,7 +450,13 @@ export default async function ObservatoryPage() {
           <div className="observatory-month-chart">
             {monthlyObservations.map(month => {
               const percentage =
-                month.count > 0 ? Math.max((month.count / maxMonthlyCount) * 100, 8) : 0;
+                month.count > 0
+                  ? Math.max(
+                      (month.count / maxMonthlyCount) * 100,
+
+                      8,
+                    )
+                  : 0;
 
               return (
                 <div
@@ -535,7 +595,11 @@ function RecentObservationItem({ observation }) {
   return (
     <Link href={`/observations/${observation.id}`} className="observatory-compact-item">
       <div className="observatory-compact-image">
-        <img src={observation.thumbnail} alt={object?.name_ko || object?.name_en || "관측 천체"} />
+        <SafeImage
+          src={observation.thumbnail}
+          fallbackSrc="/images/home/hero.png"
+          alt={object?.name_ko || object?.name_en || "관측 천체"}
+        />
       </div>
 
       <div className="observatory-compact-content">
@@ -569,7 +633,11 @@ function FavoriteObjectItem({ object }) {
   return (
     <Link href={`/objects/${object.id}`} className="observatory-compact-item">
       <div className="observatory-compact-image">
-        <img src={getCelestialThumbnail(object)} alt={object.name_ko || object.name_en} />
+        <SafeImage
+          src={getCelestialThumbnail(object)}
+          fallbackSrc="/images/home/hero.png"
+          alt={object.name_ko || object.name_en || "관심 천체"}
+        />
       </div>
 
       <div className="observatory-compact-content">
@@ -620,9 +688,11 @@ async function resolveProfileAvatar({ supabase, avatarUrl }) {
     return avatarUrl;
   }
 
-  const { data, error } = await supabase.storage
-    .from("profile-images")
-    .createSignedUrl(avatarUrl, 60 * 60);
+  const { data, error } = await supabase.storage.from("profile-images").createSignedUrl(
+    avatarUrl,
+
+    60 * 60,
+  );
 
   if (error) {
     console.error("프로필 이미지 URL 생성 오류:", error);
@@ -642,6 +712,7 @@ function createMonthlyStatistics({ observations, year, lastMonth }) {
     {
       length: lastMonth + 1,
     },
+
     (_, month) => ({
       month,
 
@@ -660,7 +731,9 @@ function createMonthlyStatistics({ observations, year, lastMonth }) {
 
     const parts = new Intl.DateTimeFormat("en-US", {
       year: "numeric",
+
       month: "numeric",
+
       timeZone: "Asia/Seoul",
     }).formatToParts(date);
 
@@ -701,7 +774,9 @@ function formatCompactDate(value) {
 
   const parts = new Intl.DateTimeFormat("ko-KR", {
     month: "2-digit",
+
     day: "2-digit",
+
     timeZone: "Asia/Seoul",
   }).formatToParts(new Date(value));
 
@@ -715,6 +790,7 @@ function formatCompactDate(value) {
 function formatJoinedDate(value) {
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
+
     month: "short",
   }).format(new Date(value));
 }

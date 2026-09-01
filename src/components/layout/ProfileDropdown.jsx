@@ -1,11 +1,16 @@
 "use client";
 
 import Link from "next/link";
+
 import { useEffect, useRef, useState } from "react";
+
 import LogoutButton from "./LogoutButton";
 
 export default function ProfileDropdown({ user, profile, nickname, initial }) {
   const [open, setOpen] = useState(false);
+
+  const [avatarFailed, setAvatarFailed] = useState(false);
+
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -22,6 +27,15 @@ export default function ProfileDropdown({ user, profile, nickname, initial }) {
     };
   }, []);
 
+  /*
+   * router.refresh 등으로
+   * 새 avatar URL이 내려오면
+   * 이전 이미지 실패 상태를 초기화.
+   */
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [profile?.avatar_url]);
+
   return (
     <div className="profile-dropdown" ref={dropdownRef}>
       <button
@@ -32,8 +46,13 @@ export default function ProfileDropdown({ user, profile, nickname, initial }) {
         aria-haspopup="menu"
         aria-label={`${nickname} 프로필 메뉴`}
       >
-        {profile?.avatar_url ? (
-          <img src={profile.avatar_url} alt="" className="header-avatar-image" />
+        {profile?.avatar_url && !avatarFailed ? (
+          <img
+            src={profile.avatar_url}
+            alt=""
+            className="header-avatar-image"
+            onError={() => setAvatarFailed(true)}
+          />
         ) : (
           <span className="header-avatar">{initial}</span>
         )}

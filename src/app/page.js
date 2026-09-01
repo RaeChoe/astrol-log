@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import LocationControl from "@/components/common/LocationControl";
+import SafeImage from "@/components/common/SafeImage";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -73,6 +74,10 @@ export default async function HomePage() {
     .order("catalog_name", {
       ascending: true,
     });
+
+  if (error) {
+    console.error("오늘의 천체 조회 오류:", error);
+  }
 
   /* ========================================
      TONIGHT'S HIGHLIGHTS
@@ -266,15 +271,20 @@ export default async function HomePage() {
           </div>
 
           {error ? (
-            <p className="section-error">천체 정보를 불러오지 못했습니다.</p>
+            <div className="data-inline-error">
+              <span aria-hidden="true">✦</span>
+
+              <p>오늘 밤 추천 천체를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p>
+            </div>
           ) : highlights.length ? (
             <div className="highlight-grid">
               {highlights.map(object => (
                 <Link href={`/objects/${object.id}`} key={object.id} className="highlight-card">
                   <div className="highlight-image-wrapper">
-                    <img
+                    <SafeImage
                       src={getCelestialThumbnail(object)}
-                      alt={object.name_ko}
+                      fallbackSrc="/images/home/hero.png"
+                      alt={object.name_ko || object.name_en || "천체 이미지"}
                       className="highlight-image"
                     />
 
@@ -296,7 +306,11 @@ export default async function HomePage() {
               ))}
             </div>
           ) : (
-            <p className="section-error">오늘 밤 관측 가능한 추천 천체가 없습니다.</p>
+            <div className="data-inline-empty">
+              <span aria-hidden="true">✦</span>
+
+              <p>오늘 밤 관측 가능한 추천 천체가 없습니다.</p>
+            </div>
           )}
         </div>
       </section>
@@ -525,18 +539,10 @@ function getEventVisualImage(event) {
     return "/images/home/hero.png";
   }
 
-  /*
-   * 유성우 / 절기처럼
-   * 하나의 천체로 표현하기 어려운 이벤트.
-   */
   if (event.visualKey === "night-sky") {
     return "/images/home/hero.png";
   }
 
-  /*
-   * 달과 행성은 가지고 있는
-   * 고해상도 detail 이미지 사용.
-   */
   if (event.visualKey) {
     return `/images/celestial/detail/${event.visualKey}.webp`;
   }

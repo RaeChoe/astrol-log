@@ -38,6 +38,7 @@ export default function ExploreClient({
   observedObjectIds = [],
   favoriteObjectIds = [],
   isLoggedIn = false,
+  loadError = false,
 }) {
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -138,6 +139,7 @@ export default function ExploreClient({
               onChange={event => setSearchTerm(event.target.value)}
               placeholder="천체 이름을 검색하세요..."
               aria-label="천체 검색"
+              disabled={loadError}
             />
           </div>
 
@@ -152,6 +154,7 @@ export default function ExploreClient({
                 type="button"
                 className={activeFilter === filter.value ? "filter-chip active" : "filter-chip"}
                 onClick={() => setActiveFilter(filter.value)}
+                disabled={loadError}
               >
                 {filter.label}
               </button>
@@ -166,6 +169,7 @@ export default function ExploreClient({
                     : "filter-chip favorite"
                 }
                 onClick={() => setActiveFilter("favorite")}
+                disabled={loadError}
               >
                 <span aria-hidden="true">★</span>
                 관심
@@ -181,97 +185,118 @@ export default function ExploreClient({
 
       <section className="explore-results">
         <div className="container">
-          <div className="explore-results-header">
-            <p>
-              <strong>{filteredObjects.length}</strong>
-              개의 천체
-            </p>
+          {loadError ? (
+            <div className="data-error-state">
+              <span className="data-error-symbol" aria-hidden="true">
+                ✦
+              </span>
 
-            {isLoggedIn && (
-              <div className="explore-observation-guide">
-                <i className="observed" />
+              <h2>천체 정보를 불러오지 못했습니다</h2>
 
-                <span>관측 완료</span>
+              <p>네트워크 상태를 확인한 뒤 페이지를 새로고침해주세요.</p>
 
-                <i />
-
-                <span>미관측</span>
-              </div>
-            )}
-          </div>
-
-          {paginatedObjects.length ? (
-            <div className="celestial-grid">
-              {paginatedObjects.map(object => (
-                <CelestialCard
-                  key={object.id}
-                  object={object}
-                  isLoggedIn={isLoggedIn}
-                  observed={observedSet.has(String(object.id))}
-                />
-              ))}
+              <button
+                type="button"
+                className="button button-secondary"
+                onClick={() => window.location.reload()}
+              >
+                다시 불러오기
+              </button>
             </div>
           ) : (
-            <div className="explore-empty">
-              <span>{activeFilter === "favorite" ? "☆" : "✦"}</span>
+            <>
+              <div className="explore-results-header">
+                <p>
+                  <strong>{filteredObjects.length}</strong>
+                  개의 천체
+                </p>
 
-              <h2>
-                {activeFilter === "favorite" ? "관심 천체가 없습니다" : "검색 결과가 없습니다"}
-              </h2>
+                {isLoggedIn && (
+                  <div className="explore-observation-guide">
+                    <i className="observed" />
 
-              <p>
-                {activeFilter === "favorite"
-                  ? "천체 상세 페이지에서 관심 천체를 추가해보세요."
-                  : "다른 이름이나 분류로 검색해보세요."}
-              </p>
-            </div>
-          )}
+                    <span>관측 완료</span>
 
-          {/* =========================
-              PAGINATION
-          ========================= */}
+                    <i />
 
-          {filteredObjects.length > ITEMS_PER_PAGE && (
-            <div className="pagination">
-              <button
-                type="button"
-                className="pagination-arrow"
-                onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
-                disabled={currentPage === 1}
-                aria-label="이전 페이지"
-              >
-                ←
-              </button>
+                    <span>미관측</span>
+                  </div>
+                )}
+              </div>
 
-              {Array.from(
-                {
-                  length: totalPages,
-                },
-                (_, index) => index + 1,
-              ).map(page => (
-                <button
-                  key={page}
-                  type="button"
-                  className={
-                    currentPage === page ? "pagination-button active" : "pagination-button"
-                  }
-                  onClick={() => setCurrentPage(page)}
-                  aria-current={currentPage === page ? "page" : undefined}
-                >
-                  {page}
-                </button>
-              ))}
+              {paginatedObjects.length ? (
+                <div className="celestial-grid">
+                  {paginatedObjects.map(object => (
+                    <CelestialCard
+                      key={object.id}
+                      object={object}
+                      isLoggedIn={isLoggedIn}
+                      observed={observedSet.has(String(object.id))}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="explore-empty">
+                  <span>{activeFilter === "favorite" ? "☆" : "✦"}</span>
 
-              <button
-                type="button"
-                className="pagination-arrow"
-                onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
-                disabled={currentPage === totalPages}
-                aria-label="다음 페이지"
-              >
-                →
-              </button>
-            </div>
+                  <h2>
+                    {activeFilter === "favorite" ? "관심 천체가 없습니다" : "검색 결과가 없습니다"}
+                  </h2>
+
+                  <p>
+                    {activeFilter === "favorite"
+                      ? "관심 있는 천체를 저장하면 이곳에서 모아볼 수 있습니다."
+                      : "다른 검색어나 필터를 선택해보세요."}
+                  </p>
+                </div>
+              )}
+
+              {totalPages > 1 && (
+                <div className="pagination">
+                  <button
+                    type="button"
+                    className="pagination-arrow"
+                    aria-label="이전 페이지"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                  >
+                    ←
+                  </button>
+
+                  {Array.from(
+                    {
+                      length: totalPages,
+                    },
+                    (_, index) => {
+                      const page = index + 1;
+
+                      return (
+                        <button
+                          type="button"
+                          key={page}
+                          className={
+                            currentPage === page ? "pagination-button active" : "pagination-button"
+                          }
+                          onClick={() => setCurrentPage(page)}
+                        >
+                          {page}
+                        </button>
+                      );
+                    },
+                  )}
+
+                  <button
+                    type="button"
+                    className="pagination-arrow"
+                    aria-label="다음 페이지"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

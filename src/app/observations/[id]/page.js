@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+
 import { requireUser } from "@/lib/auth/requireUser";
 import { createClient } from "@/lib/supabase/server";
+
 import DeleteObservationButton from "@/components/observations/DeleteObservationButton";
+import SafeImage from "@/components/common/SafeImage";
 
 const EQUIPMENT_LABELS = {
   naked_eye: "맨눈",
@@ -59,16 +62,35 @@ export default async function ObservationDetailPage({ params }) {
   const observation = observationResult.data;
 
   if (observationResult.error || !observation) {
+    if (observationResult.error) {
+      console.error("관측 상세 조회 오류:", observationResult.error);
+    }
+
     notFound();
+  }
+
+  if (imagesResult.error) {
+    console.error("관측 이미지 조회 오류:", imagesResult.error);
   }
 
   const object = observation.celestial_objects;
 
   const images = await Promise.all(
     (imagesResult.data || []).map(async image => {
-      const { data } = await supabase.storage
+      if (!image.image_url) {
+        return {
+          ...image,
+          signedUrl: "",
+        };
+      }
+
+      const { data, error } = await supabase.storage
         .from("observation-images")
         .createSignedUrl(image.image_url, 60 * 60);
+
+      if (error) {
+        console.error("관측 이미지 URL 생성 오류:", error);
+      }
 
       return {
         ...image,
@@ -76,6 +98,8 @@ export default async function ObservationDetailPage({ params }) {
       };
     }),
   );
+
+  const validImages = images.filter(image => Boolean(image.signedUrl));
 
   const equipmentLabel = EQUIPMENT_LABELS[observation.equipment] || observation.equipment || "-";
 
@@ -93,7 +117,9 @@ export default async function ObservationDetailPage({ params }) {
         <section className="observation-detail-header">
           <span className="celestial-catalog">{object?.catalog_name}</span>
 
-          <h1 className="display-en">{object?.name_en}</h1>
+          <h1 className="display-en">
+            {object?.name_en || object?.catalog_name || "Unknown Object"}
+          </h1>
 
           <p>{object?.name_ko}</p>
 
@@ -106,24 +132,37 @@ export default async function ObservationDetailPage({ params }) {
           </div>
         </section>
 
-        {images.length > 0 && (
+        {validImages.length > 0 && (
           <section className="observation-gallery-section">
             <div className="observation-gallery-heading">
               <span className="section-label">OBSERVATION PHOTOS</span>
 
-              <span>{images.length}장의 기록</span>
+              <span>{validImages.length}장의 기록</span>
             </div>
 
             <div
-              className={`observation-gallery observation-gallery-${Math.min(images.length, 3)}`}
+              className={`observation-gallery observation-gallery-${Math.min(
+                validImages.length,
+                3,
+              )}`}
             >
-              {images.map(image => (
+              {validImages.map(image => (
                 <div key={image.id} className="observation-gallery-item">
-                  <img src={image.signedUrl} alt="관측 당시 촬영한 사진" />
+                  <SafeImage
+                    src={image.signedUrl}
+                    fallbackSrc="/images/home/hero.png"
+                    alt="관측 당시 촬영한 사진"
+                  />
                 </div>
               ))}
             </div>
           </section>
+        )}
+
+        {imagesResult.error && (
+          <p className="data-inline-warning" role="status">
+            관측 사진 일부를 불러오지 못했습니다.
+          </p>
         )}
 
         <section className="observation-detail-grid">

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+
 import ExploreClient from "@/components/celestial/ExploreClient";
 
 export const metadata = {
@@ -22,18 +23,18 @@ export default async function ExplorePage() {
     .from("celestial_objects")
     .select(
       `
-      id,
-      catalog_name,
-      name_en,
-      name_ko,
-      type,
-      collection_group,
-      description,
-      distance,
-      magnitude,
-      image_url,
-      external_id
-    `,
+        id,
+        catalog_name,
+        name_en,
+        name_ko,
+        type,
+        collection_group,
+        description,
+        distance,
+        magnitude,
+        image_url,
+        external_id
+      `,
     )
     .order("id");
 
@@ -42,6 +43,7 @@ export default async function ExplorePage() {
   }
 
   let observedObjectIds = [];
+
   let favoriteObjectIds = [];
 
   /*
@@ -80,6 +82,7 @@ export default async function ExplorePage() {
       observedObjectIds={observedObjectIds}
       favoriteObjectIds={favoriteObjectIds}
       isLoggedIn={Boolean(user)}
+      loadError={Boolean(objectsError)}
     />
   );
 }

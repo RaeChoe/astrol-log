@@ -1,10 +1,17 @@
 "use client";
 
 import { useState } from "react";
+
 import { useRouter } from "next/navigation";
+
 import { createClient } from "@/lib/supabase/client";
 
-export default function FavoriteButton({ userId, objectId, initialFavorite = false }) {
+export default function FavoriteButton({
+  userId,
+  objectId,
+  initialFavorite = false,
+  initialLoadError = false,
+}) {
   const router = useRouter();
 
   const [favorite, setFavorite] = useState(initialFavorite);
@@ -14,14 +21,10 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
   const [errorMessage, setErrorMessage] = useState("");
 
   const handleFavorite = async () => {
-    if (loading) {
+    if (loading || initialLoadError) {
       return;
     }
 
-    /*
-     * 비로그인 사용자는 로그인 후
-     * 현재 천체 상세 페이지로 돌아온다.
-     */
     if (!userId) {
       router.push(`/login?next=${encodeURIComponent(`/objects/${objectId}`)}`);
 
@@ -29,16 +32,14 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
     }
 
     setLoading(true);
+
     setErrorMessage("");
 
     const supabase = createClient();
 
     /*
-     * =========================
      * 관심 천체 해제
-     * =========================
      */
-
     if (favorite) {
       const { error } = await supabase
         .from("favorites")
@@ -57,6 +58,7 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
       }
 
       setFavorite(false);
+
       setLoading(false);
 
       router.refresh();
@@ -65,9 +67,7 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
     }
 
     /*
-     * =========================
      * 관심 천체 추가
-     * =========================
      */
 
     const { error } = await supabase.from("favorites").insert({
@@ -87,6 +87,7 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
     }
 
     setFavorite(true);
+
     setLoading(false);
 
     router.refresh();
@@ -98,7 +99,7 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
         type="button"
         className={favorite ? "object-favorite-button active" : "object-favorite-button"}
         onClick={handleFavorite}
-        disabled={loading}
+        disabled={loading || initialLoadError}
         aria-pressed={favorite}
         aria-label={favorite ? "관심 천체에서 제거" : "관심 천체에 추가"}
       >
@@ -106,8 +107,22 @@ export default function FavoriteButton({ userId, objectId, initialFavorite = fal
           {favorite ? "★" : "☆"}
         </span>
 
-        <span>{loading ? "처리 중..." : favorite ? "관심 천체" : "관심 천체 추가"}</span>
+        <span>
+          {initialLoadError
+            ? "상태 확인 불가"
+            : loading
+              ? "처리 중..."
+              : favorite
+                ? "관심 천체"
+                : "관심 천체 추가"}
+        </span>
       </button>
+
+      {initialLoadError && (
+        <p className="object-favorite-error">
+          관심 천체 상태를 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.
+        </p>
+      )}
 
       {errorMessage && <p className="object-favorite-error">{errorMessage}</p>}
     </div>

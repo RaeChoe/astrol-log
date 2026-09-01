@@ -1,5 +1,7 @@
 import { requireUser } from "@/lib/auth/requireUser";
+
 import { createClient } from "@/lib/supabase/server";
+
 import CollectionCard from "@/components/collection/CollectionCard";
 
 export const metadata = {
@@ -9,14 +11,19 @@ export const metadata = {
 const GROUPS = [
   {
     key: "solar_system",
+
     title: "태양계",
   },
+
   {
     key: "messier",
+
     title: "Messier Objects",
   },
+
   {
     key: "star",
+
     title: "별",
   },
 ];
@@ -66,13 +73,49 @@ export default async function CollectionPage() {
     console.error("Collection 관측 기록 조회 오류:", observationsResult.error);
   }
 
+  /*
+   * 천체 DB 자체를 읽지 못했다면
+   * 0 / 0 도감처럼 오해할 수 있으므로
+   * 명확한 오류 화면을 표시한다.
+   */
+  if (objectsResult.error) {
+    return (
+      <main className="collection-page">
+        <section className="container collection-header">
+          <span className="section-label">MY COLLECTION</span>
+
+          <h1 className="heading-ko">나의 천체 도감</h1>
+        </section>
+
+        <section className="container">
+          <div className="data-error-state">
+            <span className="data-error-symbol" aria-hidden="true">
+              ✦
+            </span>
+
+            <h2>천체 도감을 불러오지 못했습니다</h2>
+
+            <p>일시적인 문제일 수 있습니다. 잠시 후 다시 시도해주세요.</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const objects = objectsResult.data || [];
 
+  /*
+   * 관측 기록 조회에 실패해도
+   * 천체 도감 자체는 표시한다.
+   *
+   * 단 관측 완료 여부는 알 수 없으므로
+   * 빈 배열로 처리한다.
+   */
   const observations = observationsResult.data || [];
 
   /*
    * celestial_object_id 기준으로
-   * 관측 횟수 / 최근 관측일 계산
+   * 관측 횟수 / 최근 관측일 계산.
    */
   const observationMap = new Map();
 
@@ -84,6 +127,7 @@ export default async function CollectionPage() {
     if (!current) {
       observationMap.set(objectId, {
         count: 1,
+
         lastObservedAt: observation.observed_at,
       });
 
@@ -119,6 +163,12 @@ export default async function CollectionPage() {
         <span className="section-label">MY COLLECTION</span>
 
         <h1 className="heading-ko">나의 천체 도감</h1>
+
+        {observationsResult.error && (
+          <p className="data-inline-warning" role="status">
+            관측 기록을 불러오지 못해 수집 현황이 정확하지 않을 수 있습니다.
+          </p>
+        )}
 
         <div className="collection-overall">
           <div className="collection-overall-count">
@@ -164,20 +214,21 @@ export default async function CollectionPage() {
 
           return (
             <section key={group.key} className="collection-group">
-              <div className="collection-group-header">
+              <div className="collection-group-heading">
                 <div>
-                  <h2>{group.title}</h2>
+                  <h2 className="heading-ko">{group.title}</h2>
 
-                  <p>{groupObserved}개 관측 완료</p>
+                  <span>
+                    {groupObserved}/{groupObjects.length}
+                  </span>
                 </div>
 
-                <strong>
-                  {groupObserved}
-                  <span> / {groupObjects.length}</span>
-                </strong>
+                <span className="collection-group-percent">
+                  {Math.round((groupObserved / groupObjects.length) * 100)}%
+                </span>
               </div>
 
-              <div className="collection-group-grid">
+              <div className="collection-mini-grid">
                 {groupObjects.map(object => (
                   <CollectionCard key={object.id} object={object} />
                 ))}

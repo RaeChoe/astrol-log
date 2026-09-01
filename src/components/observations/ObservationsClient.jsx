@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 
+import SafeImage from "@/components/common/SafeImage";
+
 const FILTERS = [
   {
     value: "all",
@@ -119,7 +121,11 @@ export default function ObservationsClient({ observations = [] }) {
 
             <h2>관측 기록이 없습니다</h2>
 
-            <p>이 분류의 관측 기록이 아직 없습니다.</p>
+            <p>
+              {filter === "all"
+                ? "아직 남겨진 관측 기록이 없습니다."
+                : "이 분류의 관측 기록이 아직 없습니다."}
+            </p>
 
             {filter === "all" && (
               <Link href="/observations/new" className="button button-primary">
@@ -158,15 +164,6 @@ function ObservationRow({ observation }) {
     .format(date)
     .toUpperCase();
 
-  /*
-   * 목록에서는 상세 장비명을 보여주지 않는다.
-   *
-   * telescope
-   * → 망원경
-   *
-   * binoculars
-   * → 쌍안경
-   */
   const equipmentLabel = EQUIPMENT_LABELS[observation.equipment] || observation.equipment || "-";
 
   return (
@@ -186,7 +183,11 @@ function ObservationRow({ observation }) {
       ========================= */}
 
       <div className="observation-record-thumbnail">
-        <img src={observation.thumbnail} alt={object?.name_ko || object?.name_en || "관측 천체"} />
+        <SafeImage
+          src={observation.thumbnail}
+          fallbackSrc="/images/home/hero.png"
+          alt={object?.name_ko || object?.name_en || "관측 천체"}
+        />
       </div>
 
       {/* =========================
@@ -241,13 +242,6 @@ function getSecondaryObjectName(object) {
 
   const pieces = [];
 
-  /*
-   * M31
-   * Andromeda Galaxy
-   *
-   * 처럼 카탈로그명과 영문명이
-   * 다른 경우에만 name_en 추가
-   */
   if (object.name_en && object.name_en.toLowerCase() !== object.catalog_name?.toLowerCase()) {
     pieces.push(object.name_en);
   }

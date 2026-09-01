@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import SafeImage from "@/components/common/SafeImage";
+
 import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 export default function CollectionCard({ object }) {
@@ -13,7 +15,11 @@ export default function CollectionCard({ object }) {
       }
     >
       <div className="collection-mini-image">
-        <img src={image} alt={object.name_ko || object.name_en} />
+        <SafeImage
+          src={image}
+          fallbackSrc="/images/home/hero.png"
+          alt={object.name_ko || object.name_en || "천체 이미지"}
+        />
 
         {!object.observed && (
           <div className="collection-mini-lock">
@@ -37,7 +43,7 @@ function getCardTitle(object) {
   /*
    * Messier object는
    * M31 / M42 / M45처럼
-   * catalog_name을 우선 노출
+   * catalog_name을 우선 노출.
    */
   if (object.collection_group === "messier" && object.catalog_name) {
     return object.catalog_name;

@@ -6454,3 +6454,438 @@ img {
     height: 48px;
   }
 }
+
+/* ========================================
+   GLOBAL LOADING
+======================================== */
+
+.app-loading {
+  min-height: calc(100vh - 72px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 60px 24px;
+
+  background: var(--background);
+}
+
+.app-loading-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  gap: 14px;
+
+  color: var(--text-muted);
+}
+
+.app-loading-symbol {
+  color: var(--primary);
+
+  font-size: 32px;
+
+  animation: astrolog-loading-pulse 1.6s ease-in-out infinite;
+}
+
+.app-loading-text {
+  font-size: 12px;
+
+  letter-spacing: 0.08em;
+}
+
+.app-loading-dots {
+  display: flex;
+  align-items: center;
+
+  gap: 5px;
+}
+
+.app-loading-dots i {
+  width: 4px;
+  height: 4px;
+
+  border-radius: 50%;
+
+  background: var(--primary);
+
+  opacity: 0.25;
+
+  animation: astrolog-loading-dot 1.2s ease-in-out infinite;
+}
+
+.app-loading-dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.app-loading-dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes astrolog-loading-pulse {
+  0%,
+  100% {
+    opacity: 0.4;
+
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform: scale(1.08);
+  }
+}
+
+@keyframes astrolog-loading-dot {
+  0%,
+  100% {
+    opacity: 0.2;
+
+    transform: translateY(0);
+  }
+
+  50% {
+    opacity: 1;
+
+    transform: translateY(-3px);
+  }
+}
+
+/* ========================================
+   GLOBAL ERROR PAGE
+======================================== */
+
+.app-error-page {
+  min-height: calc(100vh - 72px);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 80px 24px;
+
+  background: var(--background);
+}
+
+.app-error-content {
+  width: min(100%, 560px);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  text-align: center;
+}
+
+.app-error-symbol {
+  margin-bottom: 22px;
+
+  color: var(--primary);
+
+  font-size: 34px;
+}
+
+.app-error-content .section-label {
+  margin-bottom: 14px;
+}
+
+.app-error-content h1 {
+  margin: 0;
+
+  color: var(--text-primary);
+
+  font-size: clamp(32px, 5vw, 48px);
+  font-weight: 500;
+}
+
+.app-error-content p {
+  max-width: 430px;
+
+  margin: 18px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.app-error-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+
+  gap: 10px;
+
+  margin-top: 30px;
+}
+
+/* ========================================
+   DATA ERROR STATE
+======================================== */
+
+.data-error-state {
+  min-height: 360px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  padding: 48px 24px;
+
+  border: 1px solid var(--border);
+  border-radius: 16px;
+
+  background: var(--surface);
+
+  text-align: center;
+}
+
+.data-error-symbol {
+  color: var(--primary);
+
+  font-size: 28px;
+}
+
+.data-error-state h2 {
+  margin: 18px 0 0;
+
+  color: var(--text-primary);
+
+  font-family: var(--font-noto-serif-kr), serif;
+
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.data-error-state p {
+  max-width: 420px;
+
+  margin: 10px 0 24px;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.data-inline-warning {
+  margin: 14px 0 0;
+
+  color: #d8c98e;
+
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ========================================
+   DISABLED FILTER
+======================================== */
+
+.filter-chip:disabled,
+.explore-search:disabled {
+  opacity: 0.45;
+
+  cursor: default;
+}
+
+/* ========================================
+   UX - MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .app-loading,
+  .app-error-page {
+    min-height: calc(100vh - 64px);
+  }
+
+  .app-error-actions {
+    width: 100%;
+  }
+
+  .app-error-actions .button {
+    flex: 1;
+  }
+
+  .data-error-state {
+    min-height: 300px;
+
+    padding: 40px 20px;
+  }
+
+  .data-error-state h2 {
+    font-size: 22px;
+  }
+}
+
+/* ========================================
+   REDUCED MOTION
+======================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .app-loading-symbol,
+  .app-loading-dots i {
+    animation: none;
+  }
+}
+
+/* ========================================
+   HOME DATA STATES
+======================================== */
+
+.data-inline-error,
+.data-inline-empty {
+  min-height: 150px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  padding: 28px;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--surface);
+
+  text-align: center;
+}
+
+.data-inline-error > span,
+.data-inline-empty > span {
+  color: var(--primary);
+
+  font-size: 22px;
+}
+
+.data-inline-error p,
+.data-inline-empty p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.data-inline-error {
+  border-color: rgba(167, 139, 250, 0.18);
+}
+
+/* ========================================
+   OBSERVATION IMAGE FALLBACK
+======================================== */
+
+.observation-record-thumbnail img,
+.observation-gallery-item img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+/* ========================================
+   MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .data-inline-error,
+  .data-inline-empty {
+    min-height: 130px;
+
+    padding: 24px 18px;
+  }
+}
+
+/* ========================================
+   UX - OBJECT HERO IMAGE
+======================================== */
+
+.object-hero-image {
+  position: absolute;
+  inset: 0;
+
+  z-index: 0;
+
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+  object-position: center;
+}
+
+.object-hero-overlay {
+  z-index: 1;
+}
+
+.object-hero-inner {
+  z-index: 2;
+}
+
+/* ========================================
+   UX - OBSERVATORY DATA WARNING
+======================================== */
+
+.observatory-data-warnings {
+  display: flex;
+  flex-direction: column;
+
+  gap: 6px;
+
+  margin-top: 18px;
+}
+
+.observatory-data-warnings .data-inline-warning {
+  margin: 0;
+}
+
+/* ========================================
+   UX - OBSERVATORY SAFE IMAGE
+======================================== */
+
+.observatory-compact-image img {
+  width: 100%;
+  height: 100%;
+
+  object-fit: cover;
+}
+
+/* ========================================
+   UX - FAVORITE ERROR
+======================================== */
+
+.object-favorite-button:disabled {
+  opacity: 0.55;
+
+  cursor: default;
+}
+
+.object-favorite-error {
+  max-width: 230px;
+
+  margin: 8px 0 0;
+
+  color: #d7a4a4;
+
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+/* ========================================
+   UX - MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .observatory-data-warnings {
+    margin-top: 14px;
+  }
+
+  .object-favorite-error {
+    max-width: none;
+  }
+}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import FavoriteButton from "@/components/celestial/FavoriteButton";
+import SafeImage from "@/components/common/SafeImage";
 
 import { createClient } from "@/lib/supabase/server";
 
@@ -128,12 +129,6 @@ export default async function ObjectDetailPage({ params }) {
    * =========================
    * CURRENT SKY
    * =========================
-   *
-   * 기상청:
-   * → 현재 위치 날씨
-   *
-   * Astronomy Engine:
-   * → 현재 위치 천체 고도 / 방위
    */
 
   const now = new Date();
@@ -177,6 +172,10 @@ export default async function ObjectDetailPage({ params }) {
   let latestObservationImage = null;
 
   let isFavorite = false;
+
+  let favoriteLoadError = false;
+
+  let observationsLoadError = false;
 
   /*
    * =========================
@@ -223,22 +222,18 @@ export default async function ObjectDetailPage({ params }) {
         }),
     ]);
 
-    /*
-     * FAVORITE
-     */
-
     if (favoriteResult.error) {
       console.error("관심 천체 조회 오류:", favoriteResult.error);
+
+      favoriteLoadError = true;
     } else {
       isFavorite = Boolean(favoriteResult.data);
     }
 
-    /*
-     * OBSERVATIONS
-     */
-
     if (observationsResult.error) {
       console.error("천체별 관측 기록 조회 오류:", observationsResult.error);
+
+      observationsLoadError = true;
     } else {
       observationCount = observationsResult.count || observationsResult.data?.length || 0;
 
@@ -261,9 +256,11 @@ export default async function ObjectDetailPage({ params }) {
           data: signedUrlData,
 
           error: signedUrlError,
-        } = await supabase.storage
-          .from("observation-images")
-          .createSignedUrl(representative.image_url, 60 * 60);
+        } = await supabase.storage.from("observation-images").createSignedUrl(
+          representative.image_url,
+
+          60 * 60,
+        );
 
         if (signedUrlError) {
           console.error("최근 관측 사진 URL 생성 오류:", signedUrlError);
@@ -291,16 +288,17 @@ export default async function ObjectDetailPage({ params }) {
 
   return (
     <main className="object-detail-page">
-      {/* =========================
-          HERO
-      ========================= */}
+      {/* HERO */}
 
-      <section
-        className="object-hero"
-        style={{
-          backgroundImage: `url("${image}")`,
-        }}
-      >
+      <section className="object-hero">
+        <SafeImage
+          src={image}
+          fallbackSrc="/images/home/hero.png"
+          alt=""
+          className="object-hero-image"
+          aria-hidden="true"
+        />
+
         <div className="object-hero-overlay" />
 
         <div className="container object-hero-inner">
@@ -310,9 +308,7 @@ export default async function ObjectDetailPage({ params }) {
         </div>
       </section>
 
-      {/* =========================
-          MAIN CONTENT
-      ========================= */}
+      {/* MAIN CONTENT */}
 
       <section className="object-main-section">
         <div className="container">
@@ -336,8 +332,6 @@ export default async function ObjectDetailPage({ params }) {
                 <p className="object-main-description">{object.description}</p>
               )}
             </div>
-
-            {/* BASIC INFO */}
 
             <aside className="object-info-panel">
               <span className="object-info-heading">천체 기본 정보</span>
@@ -376,9 +370,7 @@ export default async function ObjectDetailPage({ params }) {
             </aside>
           </div>
 
-          {/* =========================
-              TODAY OBSERVATION
-          ========================= */}
+          {/* TODAY OBSERVATION */}
 
           <section className="object-observation-area">
             <p className="object-sub-label">오늘의 관측 정보</p>
@@ -429,9 +421,7 @@ export default async function ObjectDetailPage({ params }) {
             </p>
           </section>
 
-          {/* =========================
-              MY OBSERVATION
-          ========================= */}
+          {/* MY OBSERVATION */}
 
           <PersonalObservation
             user={user}
@@ -439,11 +429,10 @@ export default async function ObjectDetailPage({ params }) {
             observationCount={observationCount}
             latestObservation={latestObservation}
             previewImage={latestObservationImage || image}
+            loadError={observationsLoadError}
           />
 
-          {/* =========================
-              BOTTOM ACTIONS
-          ========================= */}
+          {/* BOTTOM ACTIONS */}
 
           <div className="object-bottom-actions">
             <Link
@@ -461,6 +450,7 @@ export default async function ObjectDetailPage({ params }) {
               userId={user?.id || null}
               objectId={object.id}
               initialFavorite={isFavorite}
+              initialLoadError={favoriteLoadError}
             />
           </div>
         </div>
@@ -473,7 +463,14 @@ export default async function ObjectDetailPage({ params }) {
    PERSONAL OBSERVATION
 ======================================== */
 
-function PersonalObservation({ user, object, observationCount, latestObservation, previewImage }) {
+function PersonalObservation({
+  user,
+  object,
+  observationCount,
+  latestObservation,
+  previewImage,
+  loadError = false,
+}) {
   /*
    * 비로그인
    */
@@ -499,7 +496,37 @@ function PersonalObservation({ user, object, observationCount, latestObservation
         </div>
 
         <div className="object-personal-preview">
-          <img src={previewImage} alt={object.name_ko || object.name_en} />
+          <SafeImage
+            src={previewImage}
+            fallbackSrc="/images/home/hero.png"
+            alt={object.name_ko || object.name_en || "천체 이미지"}
+          />
+        </div>
+      </section>
+    );
+  }
+
+  /*
+   * 관측 기록 조회 실패
+   */
+
+  if (loadError) {
+    return (
+      <section className="object-personal-card">
+        <div className="object-personal-content">
+          <span className="object-personal-label">나의 관측 기록</span>
+
+          <strong className="object-unobserved">관측 기록을 불러오지 못했습니다.</strong>
+
+          <p>일시적인 문제일 수 있습니다. 페이지를 새로고침한 뒤 다시 확인해주세요.</p>
+        </div>
+
+        <div className="object-personal-preview">
+          <SafeImage
+            src={previewImage}
+            fallbackSrc="/images/home/hero.png"
+            alt={object.name_ko || object.name_en || "천체 이미지"}
+          />
         </div>
       </section>
     );
@@ -521,7 +548,11 @@ function PersonalObservation({ user, object, observationCount, latestObservation
         </div>
 
         <div className="object-personal-preview">
-          <img src={previewImage} alt={object.name_ko || object.name_en} />
+          <SafeImage
+            src={previewImage}
+            fallbackSrc="/images/home/hero.png"
+            alt={object.name_ko || object.name_en || "천체 이미지"}
+          />
         </div>
       </section>
     );
@@ -583,7 +614,11 @@ function PersonalObservation({ user, object, observationCount, latestObservation
         href={`/observations/${latestObservation.id}`}
         className="object-personal-preview object-personal-preview-link"
       >
-        <img src={previewImage} alt={`${object.name_ko || object.name_en} 최근 관측`} />
+        <SafeImage
+          src={previewImage}
+          fallbackSrc="/images/home/hero.png"
+          alt={`${object.name_ko || object.name_en} 최근 관측`}
+        />
       </Link>
     </section>
   );
@@ -602,10 +637,6 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
     };
   }
 
-  /*
-   * 1. 지평선 아래
-   */
-
   if (observation.altitude <= 0) {
     return {
       label: "관측 불가",
@@ -613,11 +644,6 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
       accent: false,
     };
   }
-
-  /*
-   * 2. 천체는 떠 있지만
-   * 아직 하늘이 밝음
-   */
 
   if (observation.sunAltitude > -6) {
     return {
@@ -627,10 +653,6 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
     };
   }
 
-  /*
-   * 3. 낮은 고도
-   */
-
   if (observation.altitude < 20) {
     return {
       label: "낮은 고도",
@@ -638,11 +660,6 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
       accent: false,
     };
   }
-
-  /*
-   * 4. 천체 위치상 관측 가능하면
-   * 현재 위치의 실제 기상 상태 표시
-   */
 
   const score = weatherCondition?.score ?? 0;
 

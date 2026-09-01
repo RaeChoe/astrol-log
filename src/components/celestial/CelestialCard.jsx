@@ -1,13 +1,20 @@
 import Link from "next/link";
 
+import SafeImage from "@/components/common/SafeImage";
+
 import { getCelestialThumbnail } from "@/lib/celestial/images";
 
 const TYPE_LABELS = {
   planet: "Planet",
+
   moon: "Planetary Satellite",
+
   star: "Star",
+
   cluster: "Star Cluster",
+
   nebula: "Nebula",
+
   galaxy: "Galaxy",
 };
 
@@ -22,7 +29,12 @@ export default function CelestialCard({ object, observed = false, isLoggedIn = f
       className={observed ? "celestial-card observed" : "celestial-card"}
     >
       <div className="celestial-card-image-wrapper">
-        <img className="celestial-card-image" src={image} alt={object.name_ko || object.name_en} />
+        <SafeImage
+          className="celestial-card-image"
+          src={image}
+          fallbackSrc="/images/home/hero.png"
+          alt={object.name_ko || object.name_en || "천체 이미지"}
+        />
 
         <span className="celestial-card-type">{typeLabel}</span>
 
