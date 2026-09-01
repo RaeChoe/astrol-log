@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
-  title: "로그인 | AstroLog",
+  title: "로그인",
 };
 
 export default async function LoginPage({ searchParams }) {

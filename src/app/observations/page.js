@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import ObservationsClient from "@/components/observations/ObservationsClient";
 
 export const metadata = {
-  title: "관측 기록 | AstroLog",
+  title: "관측 기록",
 };
 
 const FALLBACK_IMAGES = {

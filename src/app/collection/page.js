@@ -5,25 +5,26 @@ import { createClient } from "@/lib/supabase/server";
 import CollectionCard from "@/components/collection/CollectionCard";
 
 export const metadata = {
-  title: "Collection | AstroLog",
+  title: "Collection",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const GROUPS = [
   {
     key: "solar_system",
-
     title: "태양계",
   },
 
   {
     key: "messier",
-
     title: "Messier Objects",
   },
 
   {
     key: "star",
-
     title: "별",
   },
 ];
@@ -74,9 +75,9 @@ export default async function CollectionPage() {
   }
 
   /*
-   * 천체 DB 자체를 읽지 못했다면
-   * 0 / 0 도감처럼 오해할 수 있으므로
-   * 명확한 오류 화면을 표시한다.
+   * 천체 데이터 자체가 실패하면
+   * 정상적인 0/0 상태처럼 보이지 않도록
+   * 별도 오류 화면 표시
    */
   if (objectsResult.error) {
     return (
@@ -105,17 +106,13 @@ export default async function CollectionPage() {
   const objects = objectsResult.data || [];
 
   /*
-   * 관측 기록 조회에 실패해도
-   * 천체 도감 자체는 표시한다.
-   *
-   * 단 관측 완료 여부는 알 수 없으므로
-   * 빈 배열로 처리한다.
+   * 관측 기록 조회 실패 시에도
+   * 도감 자체는 표시
    */
   const observations = observationsResult.data || [];
 
   /*
-   * celestial_object_id 기준으로
-   * 관측 횟수 / 최근 관측일 계산.
+   * 천체별 관측 횟수 / 최근 관측일 계산
    */
   const observationMap = new Map();
 
@@ -127,7 +124,6 @@ export default async function CollectionPage() {
     if (!current) {
       observationMap.set(objectId, {
         count: 1,
-
         lastObservedAt: observation.observed_at,
       });
 
@@ -159,6 +155,10 @@ export default async function CollectionPage() {
 
   return (
     <main className="collection-page">
+      {/* ========================================
+          HEADER
+      ======================================== */}
+
       <section className="container collection-header">
         <span className="section-label">MY COLLECTION</span>
 
@@ -169,6 +169,10 @@ export default async function CollectionPage() {
             관측 기록을 불러오지 못해 수집 현황이 정확하지 않을 수 있습니다.
           </p>
         )}
+
+        {/* ========================================
+            OVERALL PROGRESS
+        ======================================== */}
 
         <div className="collection-overall">
           <div className="collection-overall-count">
@@ -200,6 +204,10 @@ export default async function CollectionPage() {
         </div>
       </section>
 
+      {/* ========================================
+          COLLECTION GROUPS
+      ======================================== */}
+
       <section className="container collection-groups">
         {GROUPS.map(group => {
           const groupObjects = collectionObjects.filter(
@@ -214,21 +222,21 @@ export default async function CollectionPage() {
 
           return (
             <section key={group.key} className="collection-group">
-              <div className="collection-group-heading">
+              <div className="collection-group-header">
                 <div>
-                  <h2 className="heading-ko">{group.title}</h2>
+                  <h2>{group.title}</h2>
 
-                  <span>
-                    {groupObserved}/{groupObjects.length}
-                  </span>
+                  <p>{groupObserved}개 관측 완료</p>
                 </div>
 
-                <span className="collection-group-percent">
-                  {Math.round((groupObserved / groupObjects.length) * 100)}%
-                </span>
+                <strong>
+                  {groupObserved}
+
+                  <span> / {groupObjects.length}</span>
+                </strong>
               </div>
 
-              <div className="collection-mini-grid">
+              <div className="collection-group-grid">
                 {groupObjects.map(object => (
                   <CollectionCard key={object.id} object={object} />
                 ))}

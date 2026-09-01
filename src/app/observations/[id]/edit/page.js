@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import ObservationForm from "@/components/observations/ObservationForm";
 
 export const metadata = {
-  title: "관측 기록 수정 | AstroLog",
+  title: "관측 기록 수정",
 };
 
 export default async function EditObservationPage({ params }) {

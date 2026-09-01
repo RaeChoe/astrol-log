@@ -13,6 +13,8 @@ import { getTodaySkyData } from "@/lib/astronomy/today";
 
 import { getCurrentObjectObservation } from "@/lib/astronomy/highlights";
 
+import { DEFAULT_OG_IMAGE, SITE_NAME } from "@/lib/site";
+
 const TYPE_LABELS = {
   planet: "Planet",
 
@@ -43,36 +45,143 @@ const FALLBACK_IMAGES = {
   m31: "/images/home/m31.png",
 };
 
+/* ========================================
+   DYNAMIC SEO
+======================================== */
+
 export async function generateMetadata({ params }) {
   const { id } = await params;
 
   const supabase = await createClient();
 
-  const { data: object } = await supabase
+  const {
+    data: object,
+
+    error,
+  } = await supabase
     .from("celestial_objects")
     .select(
       `
-      name_en,
-      name_ko
-    `,
+        id,
+        catalog_name,
+        name_en,
+        name_ko,
+        type,
+        description,
+        image_url,
+        external_id
+      `,
     )
     .eq("id", id)
     .maybeSingle();
 
-  if (!object) {
+  /*
+   * DB 오류나 존재하지 않는 ID.
+   *
+   * 검색엔진에 잘못된 Object 페이지가
+   * 색인되는 것을 막는다.
+   */
+  if (error || !object) {
     return {
-      title: "Object | AstroLog",
+      title: "천체를 찾을 수 없습니다",
+
+      description: "요청한 천체 정보를 찾을 수 없습니다.",
+
+      robots: {
+        index: false,
+
+        follow: false,
+      },
     };
   }
 
-  return {
-    title: `${object.name_en || object.name_ko} | AstroLog`,
+  const displayName = object.name_ko || object.name_en || object.catalog_name || "천체";
 
-    description: object.name_ko
-      ? `${object.name_ko} 천체 정보와 관측 기록을 확인해보세요.`
-      : `${object.name_en} 천체 정보와 관측 기록을 확인해보세요.`,
+  const englishName = object.name_en || object.catalog_name || displayName;
+
+  const typeLabel = TYPE_LABELS[object.type] || "Celestial Object";
+
+  /*
+   * DB description이 있으면
+   * 검색결과 설명에도 활용.
+   *
+   * 너무 긴 설명은 잘라낸다.
+   */
+  const description = createMetadataDescription(object, displayName);
+
+  /*
+   * celestial_objects.image_url은 현재
+   *
+   * /images/celestial/detail/moon.webp
+   *
+   * 같은 형태이므로 metadataBase와
+   * 결합되어 절대 URL이 된다.
+   */
+  const image =
+    object.image_url ||
+    (object.external_id ? `/images/celestial/detail/${object.external_id}.webp` : DEFAULT_OG_IMAGE);
+
+  const canonical = `/objects/${object.id}`;
+
+  return {
+    /*
+     * RootLayout의 template으로 인해
+     *
+     * Moon | AstroLog
+     *
+     * 형태가 된다.
+     */
+    title: englishName,
+
+    description,
+
+    alternates: {
+      canonical,
+    },
+
+    openGraph: {
+      type: "article",
+
+      locale: "ko_KR",
+
+      url: canonical,
+
+      siteName: SITE_NAME,
+
+      title: `${englishName} · ${displayName}`,
+
+      description,
+
+      images: [
+        {
+          url: image,
+
+          alt: `${displayName} 천체 이미지`,
+        },
+      ],
+    },
+
+    twitter: {
+      card: "summary_large_image",
+
+      title: `${englishName} · ${displayName}`,
+
+      description,
+
+      images: [image],
+    },
+
+    other: {
+      "object:type": typeLabel,
+
+      "object:catalog": object.catalog_name || "",
+    },
   };
 }
+
+/* ========================================
+   OBJECT DETAIL
+======================================== */
 
 export default async function ObjectDetailPage({ params }) {
   const { id } = await params;
@@ -93,18 +202,18 @@ export default async function ObjectDetailPage({ params }) {
     .from("celestial_objects")
     .select(
       `
-      id,
-      catalog_name,
-      name_en,
-      name_ko,
-      type,
-      collection_group,
-      description,
-      distance,
-      magnitude,
-      image_url,
-      external_id
-    `,
+        id,
+        catalog_name,
+        name_en,
+        name_ko,
+        type,
+        collection_group,
+        description,
+        distance,
+        magnitude,
+        image_url,
+        external_id
+      `,
     )
     .eq("id", id)
     .maybeSingle();
@@ -196,21 +305,21 @@ export default async function ObjectDetailPage({ params }) {
         .from("observations")
         .select(
           `
-              id,
-              observed_at,
-              location_name,
-              equipment,
-              equipment_detail,
-              rating,
-              duration_minutes,
-              note,
+            id,
+            observed_at,
+            location_name,
+            equipment,
+            equipment_detail,
+            rating,
+            duration_minutes,
+            note,
 
-              observation_images (
-                id,
-                image_url,
-                sort_order
-              )
-            `,
+            observation_images (
+              id,
+              image_url,
+              sort_order
+            )
+          `,
           {
             count: "exact",
           },
@@ -676,6 +785,30 @@ function getCurrentObservationCondition({ observation, weatherCondition }) {
 
     accent: score >= 4,
   };
+}
+
+/* ========================================
+   SEO HELPERS
+======================================== */
+
+function createMetadataDescription(object, displayName) {
+  const source = object.description?.trim();
+
+  if (source) {
+    return truncateMetadata(source, 150);
+  }
+
+  const catalog = object.catalog_name ? ` (${object.catalog_name})` : "";
+
+  return `${displayName}${catalog}의 천체 정보와 오늘의 관측 조건, 관측 기록을 AstroLog에서 확인해보세요.`;
+}
+
+function truncateMetadata(text, maxLength) {
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return `${text.slice(0, maxLength - 1).trim()}…`;
 }
 
 /* ========================================

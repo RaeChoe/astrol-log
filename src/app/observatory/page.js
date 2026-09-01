@@ -8,7 +8,7 @@ import ObservatoryProfileForm from "@/components/observatory/ObservatoryProfileF
 import SafeImage from "@/components/common/SafeImage";
 
 export const metadata = {
-  title: "My Observatory | AstroLog",
+  title: "My Observatory",
 };
 
 const EQUIPMENT_LABELS = {

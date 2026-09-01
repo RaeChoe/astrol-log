@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import ExploreClient from "@/components/celestial/ExploreClient";
 
 export const metadata = {
-  title: "Explore | AstroLog",
+  title: "Explore",
 };
 
 export default async function ExplorePage() {
