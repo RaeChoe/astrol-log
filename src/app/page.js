@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import LocationControl from "@/components/common/LocationControl";
+
 import { createClient } from "@/lib/supabase/server";
 
 import { getObserverLocation } from "@/lib/location";
@@ -156,8 +158,6 @@ export default async function HomePage() {
     },
   ];
 
-  const locationLabel = location.source === "geolocation" ? "CURRENT LOCATION" : "SEOUL, KOREA";
-
   return (
     <main className="today-page">
       {/* ========================================
@@ -169,7 +169,11 @@ export default async function HomePage() {
 
         <div className="container today-hero-inner">
           <div className="today-hero-content">
-            <p className="today-eyebrow">GOOD EVENING · {locationLabel}</p>
+            <div className="today-location-row">
+              <p className="today-eyebrow">GOOD EVENING</p>
+
+              <LocationControl isUsingCurrentLocation={location.source === "geolocation"} />
+            </div>
 
             <h1 className="heading-ko today-title">
               <span>오늘 밤,</span>
@@ -397,7 +401,7 @@ function getEventVisualImage(event) {
   }
 
   /*
-   * 달과 행성은 이미 가지고 있는
+   * 달과 행성은 가지고 있는
    * 고해상도 detail 이미지 사용.
    */
   if (event.visualKey) {
