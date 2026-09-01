@@ -6,7 +6,7 @@ export const SITE_DESCRIPTION =
 export const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") || "http://localhost:3000";
 
-export const DEFAULT_OG_IMAGE = "/images/home/hero.png";
+export const DEFAULT_OG_IMAGE = "/images/og/og-default.png";
 
 export function createAbsoluteUrl(path = "/") {
   if (path.startsWith("http://") || path.startsWith("https://")) {
