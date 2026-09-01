@@ -7,7 +7,6 @@ const DEFAULT_LOCATION = {
 
 function createObserver({
   latitude = DEFAULT_LOCATION.latitude,
-
   longitude = DEFAULT_LOCATION.longitude,
 } = {}) {
   return new Astronomy.Observer(latitude, longitude, 0);
@@ -247,6 +246,27 @@ const MIN_ALTITUDE = 20;
  */
 const MAX_SUN_ALTITUDE = -12;
 
+/*
+ * 추천 시간으로 표시할
+ * 최대 연속 시간.
+ *
+ * 30분 샘플 × 6 = 3시간
+ */
+const RECOMMENDED_WINDOW_SAMPLES = 6;
+
+/*
+ * 최소 추천 시간.
+ *
+ * 30분 샘플 × 3 = 1시간 30분
+ */
+const MIN_WINDOW_SAMPLES = 3;
+
+/*
+ * 가장 가까운 기상 예보가
+ * 이 시간보다 멀면 사용하지 않는다.
+ */
+const MAX_FORECAST_DISTANCE_MS = 90 * 60 * 1000;
+
 /* ========================================
    TONIGHT'S HIGHLIGHTS
 ======================================== */
@@ -259,6 +279,8 @@ export function getTonightHighlights({
   longitude = DEFAULT_LOCATION.longitude,
 
   moonIllumination = 0,
+
+  forecastHours = [],
 
   now = new Date(),
 }) {
@@ -281,9 +303,14 @@ export function getTonightHighlights({
     .map(object =>
       analyzeObject({
         object,
+
         observer,
+
         timeSamples,
+
         moonIllumination,
+
+        forecastHours,
       }),
     )
     .filter(Boolean)
@@ -300,18 +327,27 @@ export function getTonightHighlights({
    OBJECT ANALYSIS
 ======================================== */
 
-function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
+function analyzeObject({ object, observer, timeSamples, moonIllumination, forecastHours }) {
   if (!object?.external_id) {
     return null;
   }
 
+  /*
+   * 각 30분 샘플마다:
+   *
+   * - 태양 고도
+   * - 천체 고도
+   * - 달과의 각거리
+   * - 시간별 기상
+   *
+   * 를 같이 계산한다.
+   */
   const visibleSamples = timeSamples
     .map(date => {
       const sunAltitude = getSolarAltitude(date, observer);
 
       /*
-       * 아직 하늘이 충분히
-       * 어둡지 않은 시간 제외.
+       * 충분히 어둡지 않은 시간 제외.
        */
       if (sunAltitude > MAX_SUN_ALTITUDE) {
         return null;
@@ -330,10 +366,28 @@ function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
         return null;
       }
 
+      const forecast = findNearestForecast(date, forecastHours);
+
+      const weatherPenalty = getHourlyWeatherPenalty(forecast);
+
+      const moonSeparation = getMoonAngularSeparation({
+        externalId: object.external_id,
+
+        date,
+
+        observer,
+      });
+
       return {
         date,
 
         ...position,
+
+        forecast,
+
+        weatherPenalty,
+
+        moonSeparation,
       };
     })
     .filter(Boolean);
@@ -349,10 +403,23 @@ function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
   }
 
   /*
-   * 가장 오래 연속으로
-   * 관측 가능한 구간 선택.
+   * 단순히 가장 오래 떠 있는 시간을
+   * 추천하는 것이 아니라
+   *
+   * 고도 + 날씨 + 달빛을 함께 고려해서
+   * 가장 좋은 관측 시간대를 고른다.
    */
-  const bestBlock = [...blocks].sort((a, b) => b.length - a.length)[0];
+  const bestBlock = selectBestObservationWindow({
+    blocks,
+
+    object,
+
+    moonIllumination,
+  });
+
+  if (!bestBlock?.length) {
+    return null;
+  }
 
   const maxAltitude = Math.max(...bestBlock.map(sample => sample.altitude));
 
@@ -363,11 +430,32 @@ function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
 
   const durationHours = (bestBlock.length * SAMPLE_MINUTES) / 60;
 
+  const averageWeatherPenalty = getAverage(bestBlock.map(sample => sample.weatherPenalty));
+
+  const moonSeparations = bestBlock
+    .map(sample => sample.moonSeparation)
+    .filter(value => Number.isFinite(value));
+
+  const averageMoonSeparation = moonSeparations.length ? getAverage(moonSeparations) : null;
+
+  /*
+   * 별점의 기반은 천문 조건.
+   *
+   * 날씨가 나쁘다고 모든 카드가
+   * 1점이 되는 현상을 피하기 위해
+   * 날씨는 rating이 아닌
+   * 시간 선택 / 추천 순위에 반영한다.
+   */
   const astronomyScore = calculateAstronomyScore({
     object,
+
     maxAltitude,
+
     durationHours,
+
     moonIllumination,
+
+    moonSeparation: averageMoonSeparation,
   });
 
   const rating = calculateDisplayRating({
@@ -383,6 +471,17 @@ function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
       SAMPLE_MINUTES,
     ),
   );
+
+  /*
+   * 최종 추천 순위.
+   *
+   * 천체 조건을 중심으로 두되
+   * 해당 시간대 날씨가 나쁘면
+   * 추천 순위가 내려간다.
+   */
+  const weatherRankPenalty = averageWeatherPenalty * 0.16;
+
+  const rankScore = astronomyScore * 10 + maxAltitude * 0.08 - weatherRankPenalty;
 
   return {
     ...object,
@@ -405,8 +504,329 @@ function analyzeObject({ object, observer, timeSamples, moonIllumination }) {
 
     timeLabel: `${startTime} — ${endTime}`,
 
-    rankScore: astronomyScore * 10 + maxAltitude * 0.08,
+    weatherPenalty: Math.round(averageWeatherPenalty),
+
+    moonSeparation: Number.isFinite(averageMoonSeparation)
+      ? Math.round(averageMoonSeparation)
+      : null,
+
+    rankScore,
   };
+}
+
+/* ========================================
+   BEST OBSERVATION WINDOW
+======================================== */
+
+function selectBestObservationWindow({ blocks, object, moonIllumination }) {
+  let best = null;
+
+  for (const block of blocks) {
+    if (block.length < MIN_WINDOW_SAMPLES) {
+      /*
+       * 1시간 30분보다 짧더라도
+       * 유일한 관측 가능 구간이면
+       * 후보 자체는 남겨둔다.
+       */
+      const quality = calculateWindowQuality({
+        samples: block,
+
+        object,
+
+        moonIllumination,
+      });
+
+      if (!best || quality > best.quality) {
+        best = {
+          samples: block,
+
+          quality,
+        };
+      }
+
+      continue;
+    }
+
+    /*
+     * 최대 3시간짜리 창을 움직이면서
+     * 가장 좋은 구간을 선택.
+     */
+    const windowSize = Math.min(RECOMMENDED_WINDOW_SAMPLES, block.length);
+
+    for (let startIndex = 0; startIndex <= block.length - windowSize; startIndex += 1) {
+      const samples = block.slice(startIndex, startIndex + windowSize);
+
+      const quality = calculateWindowQuality({
+        samples,
+
+        object,
+
+        moonIllumination,
+      });
+
+      if (!best || quality > best.quality) {
+        best = {
+          samples,
+
+          quality,
+        };
+      }
+    }
+  }
+
+  return best?.samples || null;
+}
+
+function calculateWindowQuality({ samples, object, moonIllumination }) {
+  if (!samples.length) {
+    return -Infinity;
+  }
+
+  const averageAltitude = getAverage(samples.map(sample => sample.altitude));
+
+  const averageWeatherPenalty = getAverage(samples.map(sample => sample.weatherPenalty));
+
+  const separations = samples
+    .map(sample => sample.moonSeparation)
+    .filter(value => Number.isFinite(value));
+
+  const moonSeparation = separations.length ? getAverage(separations) : null;
+
+  const moonPenalty = getMoonlightPenalty({
+    object,
+
+    moonIllumination,
+
+    moonSeparation,
+  });
+
+  /*
+   * 높을수록 좋은 값.
+   *
+   * 고도는 플러스,
+   * 기상과 달빛은 마이너스.
+   */
+  return averageAltitude * 0.8 - averageWeatherPenalty * 0.7 - moonPenalty * 12;
+}
+
+/* ========================================
+   HOURLY WEATHER
+======================================== */
+
+function findNearestForecast(date, forecastHours) {
+  if (!forecastHours?.length) {
+    return null;
+  }
+
+  const targetTime = date.getTime();
+
+  let nearest = null;
+
+  let nearestDistance = Infinity;
+
+  for (const forecast of forecastHours) {
+    if (!Number.isFinite(forecast?.timestamp)) {
+      continue;
+    }
+
+    const distance = Math.abs(forecast.timestamp - targetTime);
+
+    if (distance < nearestDistance) {
+      nearest = forecast;
+
+      nearestDistance = distance;
+    }
+  }
+
+  /*
+   * 너무 먼 시각의 예보를
+   * 억지로 사용하지 않는다.
+   */
+  if (nearestDistance > MAX_FORECAST_DISTANCE_MS) {
+    return null;
+  }
+
+  return nearest;
+}
+
+function getHourlyWeatherPenalty(forecast) {
+  /*
+   * 날씨 데이터가 없다고
+   * 추천 자체를 불리하게 만들지는 않는다.
+   */
+  if (!forecast) {
+    return 0;
+  }
+
+  let penalty = 0;
+
+  /*
+   * =========================
+   * CLOUD
+   * =========================
+   *
+   * KMA SKY
+   * 1 = 맑음
+   * 3 = 구름많음
+   * 4 = 흐림
+   */
+
+  if (forecast.skyCode === 3) {
+    penalty += 25;
+  }
+
+  if (forecast.skyCode === 4) {
+    penalty += 60;
+  }
+
+  /*
+   * =========================
+   * PRECIPITATION
+   * =========================
+   */
+
+  if (forecast.precipitationType && forecast.precipitationType !== 0) {
+    penalty += 120;
+  }
+
+  const precipitationProbability = forecast.precipitationProbability ?? 0;
+
+  penalty += precipitationProbability * 0.8;
+
+  /*
+   * =========================
+   * WIND
+   * =========================
+   */
+
+  const windSpeed = forecast.windSpeed ?? 0;
+
+  if (windSpeed >= 14) {
+    penalty += 45;
+  } else if (windSpeed >= 8) {
+    penalty += 22;
+  } else if (windSpeed >= 5) {
+    penalty += 8;
+  }
+
+  /*
+   * =========================
+   * HUMIDITY
+   * =========================
+   */
+
+  const humidity = forecast.humidity ?? 0;
+
+  if (humidity >= 95) {
+    penalty += 35;
+  } else if (humidity >= 90) {
+    penalty += 25;
+  } else if (humidity >= 80) {
+    penalty += 12;
+  }
+
+  return penalty;
+}
+
+/* ========================================
+   MOON ANGULAR SEPARATION
+======================================== */
+
+function getMoonAngularSeparation({ externalId, date, observer }) {
+  /*
+   * 달 자신은 각거리 패널티가 필요 없다.
+   */
+  if (externalId === "moon") {
+    return null;
+  }
+
+  const objectCoordinates = getObjectEquatorialCoordinates(externalId, date, observer);
+
+  if (!objectCoordinates) {
+    return null;
+  }
+
+  let moon;
+
+  try {
+    moon = Astronomy.Equator(Astronomy.Body.Moon, date, observer, true, true);
+  } catch {
+    return null;
+  }
+
+  return calculateAngularSeparation(
+    {
+      ra: objectCoordinates.ra,
+
+      dec: objectCoordinates.dec,
+    },
+
+    {
+      ra: moon.ra,
+
+      dec: moon.dec,
+    },
+  );
+}
+
+function getObjectEquatorialCoordinates(externalId, date, observer) {
+  const solarBody = SOLAR_SYSTEM_BODIES[externalId];
+
+  if (solarBody) {
+    try {
+      const equatorial = Astronomy.Equator(solarBody, date, observer, true, true);
+
+      return {
+        ra: equatorial.ra,
+
+        dec: equatorial.dec,
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  const fixed = FIXED_OBJECTS[externalId];
+
+  if (!fixed) {
+    return null;
+  }
+
+  return {
+    ra: fixed.ra,
+
+    dec: fixed.dec,
+  };
+}
+
+function calculateAngularSeparation(first, second) {
+  if (!first || !second) {
+    return null;
+  }
+
+  /*
+   * 적경은 hour 단위이므로
+   * 15를 곱해 degree로 변환.
+   */
+  const ra1 = degreesToRadians(first.ra * 15);
+
+  const ra2 = degreesToRadians(second.ra * 15);
+
+  const dec1 = degreesToRadians(first.dec);
+
+  const dec2 = degreesToRadians(second.dec);
+
+  const cosine =
+    Math.sin(dec1) * Math.sin(dec2) + Math.cos(dec1) * Math.cos(dec2) * Math.cos(ra1 - ra2);
+
+  /*
+   * 부동소수점 오차로
+   * acos 범위(-1 ~ 1)를
+   * 살짝 벗어나는 경우 방지.
+   */
+  const clamped = Math.max(-1, Math.min(1, cosine));
+
+  return radiansToDegrees(Math.acos(clamped));
 }
 
 /* ========================================
@@ -463,7 +883,13 @@ export function getCurrentObjectObservation({
    POSITION
 ======================================== */
 
-export function getObjectPosition(externalId, date = new Date(), observer = createObserver()) {
+export function getObjectPosition(
+  externalId,
+
+  date = new Date(),
+
+  observer = createObserver(),
+) {
   const solarBody = SOLAR_SYSTEM_BODIES[externalId];
 
   /*
@@ -511,7 +937,11 @@ export function getObjectPosition(externalId, date = new Date(), observer = crea
    SUN POSITION
 ======================================== */
 
-function getSolarAltitude(date, observer = createObserver()) {
+function getSolarAltitude(
+  date,
+
+  observer = createObserver(),
+) {
   const equatorial = Astronomy.Equator(Astronomy.Body.Sun, date, observer, true, true);
 
   const horizon = Astronomy.Horizon(date, observer, equatorial.ra, equatorial.dec, "normal");
@@ -523,7 +953,17 @@ function getSolarAltitude(date, observer = createObserver()) {
    ASTRONOMY SCORE
 ======================================== */
 
-function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllumination }) {
+function calculateAstronomyScore({
+  object,
+
+  maxAltitude,
+
+  durationHours,
+
+  moonIllumination,
+
+  moonSeparation,
+}) {
   let score = 0;
 
   /*
@@ -572,27 +1012,88 @@ function calculateAstronomyScore({ object, maxAltitude, durationHours, moonIllum
    * =========================
    */
 
-  if (durationHours >= 5) {
+  if (durationHours >= 3) {
     score += 2;
-  } else if (durationHours >= 3) {
+  } else if (durationHours >= 2) {
     score += 1.5;
-  } else if (durationHours >= 1.5) {
+  } else if (durationHours >= 1) {
     score += 1;
   }
 
   /*
    * =========================
-   * MOONLIGHT PENALTY
+   * MOONLIGHT
    * =========================
+   *
+   * 기존에는 달 조명률만 봤지만
+   * 이제 실제 달과의 각거리까지 반영.
    */
 
-  if (moonIllumination >= 70 && ["galaxy", "nebula", "cluster"].includes(object.type)) {
-    score -= 1.5;
-  } else if (moonIllumination >= 40 && ["galaxy", "nebula"].includes(object.type)) {
-    score -= 0.75;
-  }
+  score -= getMoonlightPenalty({
+    object,
+
+    moonIllumination,
+
+    moonSeparation,
+  });
 
   return Math.max(0, score);
+}
+
+/* ========================================
+   MOONLIGHT PENALTY
+======================================== */
+
+function getMoonlightPenalty({ object, moonIllumination, moonSeparation }) {
+  /*
+   * 달빛 영향을 크게 받는 대상.
+   */
+  const deepSky = ["galaxy", "nebula", "cluster"].includes(object?.type);
+
+  if (!deepSky) {
+    return 0;
+  }
+
+  let penalty = 0;
+
+  /*
+   * 달 자체 밝기.
+   */
+  if (moonIllumination >= 85) {
+    penalty += 1.2;
+  } else if (moonIllumination >= 70) {
+    penalty += 0.9;
+  } else if (moonIllumination >= 40) {
+    penalty += 0.45;
+  }
+
+  /*
+   * 달과 실제 각거리.
+   *
+   * 달과 가까울수록
+   * 주변 하늘 배경이 밝아져
+   * 은하/성운 같은 저표면밝기 천체에
+   * 특히 불리하다.
+   */
+  if (Number.isFinite(moonSeparation) && moonIllumination >= 30) {
+    if (moonSeparation < 20) {
+      penalty += 2;
+    } else if (moonSeparation < 35) {
+      penalty += 1.25;
+    } else if (moonSeparation < 60) {
+      penalty += 0.55;
+    }
+  }
+
+  /*
+   * 은하 / 성운은 성단보다
+   * 달빛에 좀 더 민감하게 처리.
+   */
+  if (["galaxy", "nebula"].includes(object.type) && moonIllumination >= 70) {
+    penalty += 0.35;
+  }
+
+  return penalty;
 }
 
 /* ========================================
@@ -780,6 +1281,28 @@ export function getDirectionLabel(azimuth) {
   const index = Math.round(azimuth / 45) % 8;
 
   return directions[index];
+}
+
+/* ========================================
+   HELPERS
+======================================== */
+
+function getAverage(values) {
+  const valid = values.filter(value => Number.isFinite(Number(value)));
+
+  if (!valid.length) {
+    return 0;
+  }
+
+  return valid.reduce((total, value) => total + Number(value), 0) / valid.length;
+}
+
+function degreesToRadians(value) {
+  return value * (Math.PI / 180);
+}
+
+function radiansToDegrees(value) {
+  return value * (180 / Math.PI);
 }
 
 /* ========================================

@@ -62,6 +62,12 @@ export async function getTodaySkyData(location = DEFAULT_LOCATION) {
 
       date: formatDate(now),
 
+      /*
+       * Tonight's Highlights에서도
+       * 시간별 날씨를 사용할 수 있도록 전달.
+       */
+      forecastHours: weather.hourly || [],
+
       ...weather.current,
 
       ...astronomy,
@@ -99,6 +105,8 @@ export async function getTodaySkyData(location = DEFAULT_LOCATION) {
       longitude: observerLocation.longitude,
 
       date: formatDate(now),
+
+      forecastHours: [],
 
       temperature: null,
 

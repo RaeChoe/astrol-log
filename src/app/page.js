@@ -88,6 +88,11 @@ export default async function HomePage() {
         longitude: location.longitude,
 
         moonIllumination: sky.moonIllumination,
+
+        /*
+         * 기상청 시간별 예보 전달.
+         */
+        forecastHours: sky.forecastHours || [],
       });
 
   /* ========================================
