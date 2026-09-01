@@ -378,6 +378,463 @@ img {
 }
 
 /* ========================================
+   AUTH
+======================================== */
+
+.auth-page {
+  position: relative;
+
+  min-height: calc(100vh - 72px);
+
+  overflow: hidden;
+
+  background: var(--background);
+}
+
+/* ========================================
+   FULL-BLEED BACKGROUND
+   이미지만 컨테이너 밖까지 확장
+======================================== */
+
+.auth-background {
+  position: absolute;
+
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width: 50%;
+
+  background-color: #03050a;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center;
+}
+
+.auth-background-login {
+  background-position: center;
+}
+
+.auth-background-signup {
+  background-position: center;
+}
+
+.auth-background-overlay {
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(
+    180deg,
+    rgba(3, 5, 10, 0.06) 0%,
+    rgba(3, 5, 10, 0.12) 55%,
+    rgba(3, 5, 10, 0.8) 100%
+  );
+}
+
+/* ========================================
+   INNER LAYOUT
+   모든 콘텐츠는 1280px 안
+======================================== */
+
+.auth-layout {
+  position: relative;
+  z-index: 2;
+
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+
+  min-height: calc(100vh - 72px);
+}
+
+/* ========================================
+   LEFT COPY
+======================================== */
+
+.auth-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+
+  padding: 60px 64px 64px 0;
+}
+
+.auth-copy h1 {
+  margin: 0;
+
+  max-width: 470px;
+
+  font-size: clamp(42px, 4vw, 62px);
+  font-weight: 600;
+
+  line-height: 0.98;
+  letter-spacing: -0.035em;
+}
+
+.auth-copy p {
+  margin: 20px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ========================================
+   RIGHT FORM
+======================================== */
+
+.auth-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 60px 0 60px 64px;
+}
+
+.auth-content-inner {
+  width: min(100%, 460px);
+}
+
+.auth-content-inner > h2 {
+  margin: 0;
+
+  font-size: 38px;
+  font-weight: 500;
+
+  line-height: 1.35;
+}
+
+.auth-description {
+  margin: 14px 0 34px;
+
+  color: var(--text-muted);
+
+  font-size: 13px;
+}
+
+/* ========================================
+   AUTH FORM
+======================================== */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+
+  gap: 18px;
+}
+
+.auth-field {
+  display: flex;
+  flex-direction: column;
+
+  gap: 8px;
+}
+
+.auth-field label {
+  color: var(--text-muted);
+
+  font-size: 11px;
+}
+
+.auth-field input {
+  width: 100%;
+  height: 50px;
+
+  padding: 0 15px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  outline: none;
+
+  background: var(--surface-elevated);
+
+  color: var(--text-primary);
+
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.auth-field input::placeholder {
+  color: #616979;
+}
+
+.auth-field input:focus {
+  border-color: rgba(167, 139, 250, 0.6);
+
+  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.08);
+}
+
+.auth-help {
+  color: #626a79;
+
+  font-size: 10px;
+}
+
+/* ========================================
+   AUTH MESSAGES
+======================================== */
+
+.auth-error {
+  margin: -4px 0 0;
+
+  color: #e69aa2;
+
+  font-size: 11px;
+}
+
+.auth-success {
+  margin: 0;
+
+  padding: 12px 14px;
+
+  border: 1px solid rgba(125, 211, 252, 0.18);
+  border-radius: 9px;
+
+  background: rgba(125, 211, 252, 0.05);
+
+  color: var(--secondary);
+
+  font-size: 11px;
+}
+
+/* ========================================
+   FORGOT PASSWORD
+======================================== */
+
+.auth-forgot-row {
+  display: flex;
+  justify-content: flex-end;
+
+  margin-top: -8px;
+}
+
+.auth-forgot-row button {
+  padding: 0;
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(--text-muted);
+
+  cursor: pointer;
+
+  font-size: 10px;
+}
+
+.auth-forgot-row button:hover {
+  color: var(--primary);
+}
+
+/* ========================================
+   SUBMIT
+======================================== */
+
+.auth-submit {
+  width: 100%;
+  height: 52px;
+
+  margin-top: 4px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: var(--primary);
+
+  color: #080b14;
+
+  cursor: pointer;
+
+  font-weight: 700;
+
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+
+  background: #b8a5fb;
+}
+
+.auth-submit:disabled {
+  opacity: 0.55;
+
+  cursor: default;
+}
+
+/* ========================================
+   DIVIDER
+======================================== */
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+
+  gap: 14px;
+
+  margin: 24px 0 18px;
+}
+
+.auth-divider span {
+  flex: 1;
+
+  height: 1px;
+
+  background: var(--border);
+}
+
+.auth-divider p {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 10px;
+}
+
+/* ========================================
+   GOOGLE
+======================================== */
+
+.google-auth-button {
+  width: 100%;
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 10px;
+
+  border: 1px solid var(--border);
+  border-radius: 10px;
+
+  background: transparent;
+
+  color: var(--text-primary);
+
+  cursor: pointer;
+
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease;
+}
+
+.google-auth-button:hover {
+  border-color: rgba(167, 139, 250, 0.32);
+
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.google-auth-icon {
+  width: 18px;
+  height: 18px;
+
+  object-fit: contain;
+
+  flex-shrink: 0;
+}
+
+/* ========================================
+   AUTH SWITCH
+======================================== */
+
+.auth-switch {
+  margin: 20px 0 0;
+
+  color: var(--text-muted);
+
+  text-align: center;
+
+  font-size: 11px;
+}
+
+.auth-switch a {
+  color: var(--primary);
+}
+
+/* ========================================
+   AUTH TABLET
+======================================== */
+
+@media (max-width: 1024px) {
+  .auth-copy {
+    padding-right: 36px;
+  }
+
+  .auth-content {
+    padding-left: 36px;
+  }
+
+  .auth-copy h1 {
+    font-size: 46px;
+  }
+}
+
+/* ========================================
+   AUTH MOBILE
+======================================== */
+
+@media (max-width: 767px) {
+  .auth-page {
+    min-height: auto;
+  }
+
+  .auth-background {
+    position: relative;
+
+    width: 100%;
+    height: 280px;
+  }
+
+  .auth-layout {
+    display: block;
+
+    min-height: auto;
+  }
+
+  .auth-copy {
+    position: absolute;
+
+    top: 0;
+    left: 16px;
+    right: 16px;
+
+    height: 280px;
+
+    padding: 0 0 28px;
+
+    justify-content: flex-end;
+  }
+
+  .auth-copy h1 {
+    font-size: 34px;
+  }
+
+  .auth-copy p {
+    margin-top: 12px;
+
+    font-size: 11px;
+  }
+
+  .auth-content {
+    padding: 44px 0 70px;
+  }
+
+  .auth-content-inner {
+    width: 100%;
+  }
+
+  .auth-content-inner > h2 {
+    font-size: 30px;
+  }
+}
+
+/* ========================================
    TODAY PAGE
 ======================================== */
 
