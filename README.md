@@ -11,10 +11,8 @@ AstroLog는 천체 탐색부터 실제 관측 기록, 천체 도감 수집까지
 
 ## 🔗 배포 링크
 
-> 배포 후 추가
-
-- Live Demo: `https://배포주소.vercel.app`
-- GitHub: `https://github.com/...`
+- Live Demo: [https://astrol-log-woad.vercel.app](https://astrol-log-woad.vercel.app)
+- GitHub: [https://github.com/RaeChoe/astrol-log](https://github.com/RaeChoe/astrol-log)
 
 ---
 
@@ -402,6 +400,9 @@ Supabase Authentication을 이용해 인증을 구현했습니다.
 /observatory
 ```
 
+배포 환경에서는 Supabase Auth의 Site URL과 Redirect URL을  
+Vercel Production Domain 기준으로 설정해 OAuth 로그인 후 실제 배포 주소로 복귀하도록 구성했습니다.
+
 ---
 
 ## 🔎 SEO
@@ -473,13 +474,19 @@ npm run dev
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 KMA_API_KEY=
 NEXT_PUBLIC_SITE_URL=
 ```
 
 `NEXT_PUBLIC_SITE_URL`은 로컬 환경에서는 생략할 수 있으며,  
-Vercel 배포 환경에서 실제 서비스 URL을 등록합니다.
+Vercel 배포 환경에서는 실제 Production Domain을 등록합니다.
+
+현재 배포 주소:
+
+```text
+https://astrol-log-woad.vercel.app
+```
 
 ---
 
