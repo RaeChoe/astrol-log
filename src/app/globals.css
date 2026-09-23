@@ -30,6 +30,10 @@
 
 html {
   background: var(--background);
+
+  /* 페이지별 콘텐츠 높이가 달라도 스크롤바 영역을 항상 확보해
+     라우트 전환 시 화면이 좌우로 흔들리지 않게 합니다. */
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -6913,104 +6917,6 @@ img {
 }
 
 /* ========================================
-   GLOBAL LOADING
-======================================== */
-
-.app-loading {
-  min-height: calc(100vh - 72px);
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 60px 24px;
-
-  background: var(--background);
-}
-
-.app-loading-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-
-  gap: 14px;
-
-  color: var(--text-muted);
-}
-
-.app-loading-symbol {
-  color: var(--primary);
-
-  font-size: 32px;
-
-  animation: astrolog-loading-pulse 1.6s ease-in-out infinite;
-}
-
-.app-loading-text {
-  font-size: 12px;
-
-  letter-spacing: 0.08em;
-}
-
-.app-loading-dots {
-  display: flex;
-  align-items: center;
-
-  gap: 5px;
-}
-
-.app-loading-dots i {
-  width: 4px;
-  height: 4px;
-
-  border-radius: 50%;
-
-  background: var(--primary);
-
-  opacity: 0.25;
-
-  animation: astrolog-loading-dot 1.2s ease-in-out infinite;
-}
-
-.app-loading-dots i:nth-child(2) {
-  animation-delay: 0.15s;
-}
-
-.app-loading-dots i:nth-child(3) {
-  animation-delay: 0.3s;
-}
-
-@keyframes astrolog-loading-pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-
-    transform: scale(0.9);
-  }
-
-  50% {
-    opacity: 1;
-
-    transform: scale(1.08);
-  }
-}
-
-@keyframes astrolog-loading-dot {
-  0%,
-  100% {
-    opacity: 0.2;
-
-    transform: translateY(0);
-  }
-
-  50% {
-    opacity: 1;
-
-    transform: translateY(-3px);
-  }
-}
-
-/* ========================================
    GLOBAL ERROR PAGE
 ======================================== */
 
@@ -7153,7 +7059,6 @@ img {
 ======================================== */
 
 @media (max-width: 767px) {
-  .app-loading,
   .app-error-page {
     min-height: calc(100vh - 64px);
   }
@@ -7174,17 +7079,6 @@ img {
 
   .data-error-state h2 {
     font-size: 22px;
-  }
-}
-
-/* ========================================
-   REDUCED MOTION
-======================================== */
-
-@media (prefers-reduced-motion: reduce) {
-  .app-loading-symbol,
-  .app-loading-dots i {
-    animation: none;
   }
 }
 
